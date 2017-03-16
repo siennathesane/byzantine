@@ -9,17 +9,20 @@ It is generated from these files:
 	byzantine.proto
 
 It has these top-level messages:
-	Point
-	Rectangle
-	Feature
-	RouteNote
-	RouteSummary
+	Publication
+	PubResponse
+	SubRequest
+	ChainMAC
+	ChainResponse
+	EchoResponse
+	ReadyResponse
 */
 package byzantine
 
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
+import _ "google.golang.org/genproto/googleapis/api/annotations"
 
 import (
 	context "golang.org/x/net/context"
@@ -37,173 +40,206 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
-// Points are represented as latitude-longitude pairs in the E7 representation
-// (degrees multiplied by 10**7 and rounded to the nearest integer).
-// Latitudes should be in the range +/- 90 degrees and longitude should be in
-// the range +/- 180 degrees (inclusive).
-type Point struct {
-	Latitude  int32 `protobuf:"varint,1,opt,name=latitude" json:"latitude,omitempty"`
-	Longitude int32 `protobuf:"varint,2,opt,name=longitude" json:"longitude,omitempty"`
+type Publication struct {
+	PubType       uint32      `protobuf:"varint,1,opt,name=PubType" json:"PubType,omitempty"`
+	PublisherID   uint64      `protobuf:"varint,2,opt,name=PublisherID" json:"PublisherID,omitempty"`
+	PublicationID int64       `protobuf:"zigzag64,3,opt,name=PublicationID" json:"PublicationID,omitempty"`
+	TopicID       uint64      `protobuf:"varint,4,opt,name=TopicID" json:"TopicID,omitempty"`
+	BrokerID      uint64      `protobuf:"varint,5,opt,name=BrokerID" json:"BrokerID,omitempty"`
+	Contents      [][]byte    `protobuf:"bytes,6,rep,name=Contents,proto3" json:"Contents,omitempty"`
+	MAC           []byte      `protobuf:"bytes,7,opt,name=MAC,proto3" json:"MAC,omitempty"`
+	ChainMACs     []*ChainMAC `protobuf:"bytes,8,rep,name=ChainMACs" json:"ChainMACs,omitempty"`
 }
 
-func (m *Point) Reset()                    { *m = Point{} }
-func (m *Point) String() string            { return proto.CompactTextString(m) }
-func (*Point) ProtoMessage()               {}
-func (*Point) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (m *Publication) Reset()                    { *m = Publication{} }
+func (m *Publication) String() string            { return proto.CompactTextString(m) }
+func (*Publication) ProtoMessage()               {}
+func (*Publication) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
-func (m *Point) GetLatitude() int32 {
+func (m *Publication) GetPubType() uint32 {
 	if m != nil {
-		return m.Latitude
+		return m.PubType
 	}
 	return 0
 }
 
-func (m *Point) GetLongitude() int32 {
+func (m *Publication) GetPublisherID() uint64 {
 	if m != nil {
-		return m.Longitude
+		return m.PublisherID
 	}
 	return 0
 }
 
-// A latitude-longitude rectangle, represented as two diagonally opposite
-// points "lo" and "hi".
-type Rectangle struct {
-	// One corner of the rectangle.
-	Lo *Point `protobuf:"bytes,1,opt,name=lo" json:"lo,omitempty"`
-	// The other corner of the rectangle.
-	Hi *Point `protobuf:"bytes,2,opt,name=hi" json:"hi,omitempty"`
+func (m *Publication) GetPublicationID() int64 {
+	if m != nil {
+		return m.PublicationID
+	}
+	return 0
 }
 
-func (m *Rectangle) Reset()                    { *m = Rectangle{} }
-func (m *Rectangle) String() string            { return proto.CompactTextString(m) }
-func (*Rectangle) ProtoMessage()               {}
-func (*Rectangle) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
-
-func (m *Rectangle) GetLo() *Point {
+func (m *Publication) GetTopicID() uint64 {
 	if m != nil {
-		return m.Lo
+		return m.TopicID
+	}
+	return 0
+}
+
+func (m *Publication) GetBrokerID() uint64 {
+	if m != nil {
+		return m.BrokerID
+	}
+	return 0
+}
+
+func (m *Publication) GetContents() [][]byte {
+	if m != nil {
+		return m.Contents
 	}
 	return nil
 }
 
-func (m *Rectangle) GetHi() *Point {
+func (m *Publication) GetMAC() []byte {
 	if m != nil {
-		return m.Hi
+		return m.MAC
 	}
 	return nil
 }
 
-// A feature names something at a given point.
-//
-// If a feature could not be named, the name is empty.
-type Feature struct {
-	// The name of the feature.
-	Name string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
-	// The point where the feature is detected.
-	Location *Point `protobuf:"bytes,2,opt,name=location" json:"location,omitempty"`
+func (m *Publication) GetChainMACs() []*ChainMAC {
+	if m != nil {
+		return m.ChainMACs
+	}
+	return nil
 }
 
-func (m *Feature) Reset()                    { *m = Feature{} }
-func (m *Feature) String() string            { return proto.CompactTextString(m) }
-func (*Feature) ProtoMessage()               {}
-func (*Feature) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+type PubResponse struct {
+	Success bool `protobuf:"varint,1,opt,name=Success" json:"Success,omitempty"`
+}
 
-func (m *Feature) GetName() string {
+func (m *PubResponse) Reset()                    { *m = PubResponse{} }
+func (m *PubResponse) String() string            { return proto.CompactTextString(m) }
+func (*PubResponse) ProtoMessage()               {}
+func (*PubResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+
+func (m *PubResponse) GetSuccess() bool {
 	if m != nil {
-		return m.Name
+		return m.Success
+	}
+	return false
+}
+
+type SubRequest struct {
+	PublisherID uint64 `protobuf:"varint,1,opt,name=PublisherID" json:"PublisherID,omitempty"`
+	BrokerID    uint64 `protobuf:"varint,2,opt,name=BrokerID" json:"BrokerID,omitempty"`
+}
+
+func (m *SubRequest) Reset()                    { *m = SubRequest{} }
+func (m *SubRequest) String() string            { return proto.CompactTextString(m) }
+func (*SubRequest) ProtoMessage()               {}
+func (*SubRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+
+func (m *SubRequest) GetPublisherID() uint64 {
+	if m != nil {
+		return m.PublisherID
+	}
+	return 0
+}
+
+func (m *SubRequest) GetBrokerID() uint64 {
+	if m != nil {
+		return m.BrokerID
+	}
+	return 0
+}
+
+type ChainMAC struct {
+	From string `protobuf:"bytes,1,opt,name=From" json:"From,omitempty"`
+	To   string `protobuf:"bytes,2,opt,name=To" json:"To,omitempty"`
+	MAC  []byte `protobuf:"bytes,3,opt,name=MAC,proto3" json:"MAC,omitempty"`
+}
+
+func (m *ChainMAC) Reset()                    { *m = ChainMAC{} }
+func (m *ChainMAC) String() string            { return proto.CompactTextString(m) }
+func (*ChainMAC) ProtoMessage()               {}
+func (*ChainMAC) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+
+func (m *ChainMAC) GetFrom() string {
+	if m != nil {
+		return m.From
 	}
 	return ""
 }
 
-func (m *Feature) GetLocation() *Point {
+func (m *ChainMAC) GetTo() string {
 	if m != nil {
-		return m.Location
-	}
-	return nil
-}
-
-// A RouteNote is a message sent while at a given point.
-type RouteNote struct {
-	// The location from which the message is sent.
-	Location *Point `protobuf:"bytes,1,opt,name=location" json:"location,omitempty"`
-	// The message to be sent.
-	Message string `protobuf:"bytes,2,opt,name=message" json:"message,omitempty"`
-}
-
-func (m *RouteNote) Reset()                    { *m = RouteNote{} }
-func (m *RouteNote) String() string            { return proto.CompactTextString(m) }
-func (*RouteNote) ProtoMessage()               {}
-func (*RouteNote) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
-
-func (m *RouteNote) GetLocation() *Point {
-	if m != nil {
-		return m.Location
-	}
-	return nil
-}
-
-func (m *RouteNote) GetMessage() string {
-	if m != nil {
-		return m.Message
+		return m.To
 	}
 	return ""
 }
 
-// A RouteSummary is received in response to a RecordRoute rpc.
-//
-// It contains the number of individual points received, the number of
-// detected features, and the total distance covered as the cumulative sum of
-// the distance between each point.
-type RouteSummary struct {
-	// The number of points received.
-	PointCount int32 `protobuf:"varint,1,opt,name=point_count,json=pointCount" json:"point_count,omitempty"`
-	// The number of known features passed while traversing the route.
-	FeatureCount int32 `protobuf:"varint,2,opt,name=feature_count,json=featureCount" json:"feature_count,omitempty"`
-	// The distance covered in metres.
-	Distance int32 `protobuf:"varint,3,opt,name=distance" json:"distance,omitempty"`
-	// The duration of the traversal in seconds.
-	ElapsedTime int32 `protobuf:"varint,4,opt,name=elapsed_time,json=elapsedTime" json:"elapsed_time,omitempty"`
+func (m *ChainMAC) GetMAC() []byte {
+	if m != nil {
+		return m.MAC
+	}
+	return nil
 }
 
-func (m *RouteSummary) Reset()                    { *m = RouteSummary{} }
-func (m *RouteSummary) String() string            { return proto.CompactTextString(m) }
-func (*RouteSummary) ProtoMessage()               {}
-func (*RouteSummary) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
-
-func (m *RouteSummary) GetPointCount() int32 {
-	if m != nil {
-		return m.PointCount
-	}
-	return 0
+type ChainResponse struct {
+	Valid bool `protobuf:"varint,1,opt,name=Valid" json:"Valid,omitempty"`
 }
 
-func (m *RouteSummary) GetFeatureCount() int32 {
+func (m *ChainResponse) Reset()                    { *m = ChainResponse{} }
+func (m *ChainResponse) String() string            { return proto.CompactTextString(m) }
+func (*ChainResponse) ProtoMessage()               {}
+func (*ChainResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
+
+func (m *ChainResponse) GetValid() bool {
 	if m != nil {
-		return m.FeatureCount
+		return m.Valid
 	}
-	return 0
+	return false
 }
 
-func (m *RouteSummary) GetDistance() int32 {
-	if m != nil {
-		return m.Distance
-	}
-	return 0
+type EchoResponse struct {
+	Hello bool `protobuf:"varint,1,opt,name=Hello" json:"Hello,omitempty"`
 }
 
-func (m *RouteSummary) GetElapsedTime() int32 {
+func (m *EchoResponse) Reset()                    { *m = EchoResponse{} }
+func (m *EchoResponse) String() string            { return proto.CompactTextString(m) }
+func (*EchoResponse) ProtoMessage()               {}
+func (*EchoResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
+
+func (m *EchoResponse) GetHello() bool {
 	if m != nil {
-		return m.ElapsedTime
+		return m.Hello
 	}
-	return 0
+	return false
+}
+
+type ReadyResponse struct {
+	Ready bool `protobuf:"varint,1,opt,name=Ready" json:"Ready,omitempty"`
+}
+
+func (m *ReadyResponse) Reset()                    { *m = ReadyResponse{} }
+func (m *ReadyResponse) String() string            { return proto.CompactTextString(m) }
+func (*ReadyResponse) ProtoMessage()               {}
+func (*ReadyResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
+
+func (m *ReadyResponse) GetReady() bool {
+	if m != nil {
+		return m.Ready
+	}
+	return false
 }
 
 func init() {
-	proto.RegisterType((*Point)(nil), "byzantine.Point")
-	proto.RegisterType((*Rectangle)(nil), "byzantine.Rectangle")
-	proto.RegisterType((*Feature)(nil), "byzantine.Feature")
-	proto.RegisterType((*RouteNote)(nil), "byzantine.RouteNote")
-	proto.RegisterType((*RouteSummary)(nil), "byzantine.RouteSummary")
+	proto.RegisterType((*Publication)(nil), "byzantine.Publication")
+	proto.RegisterType((*PubResponse)(nil), "byzantine.PubResponse")
+	proto.RegisterType((*SubRequest)(nil), "byzantine.SubRequest")
+	proto.RegisterType((*ChainMAC)(nil), "byzantine.ChainMAC")
+	proto.RegisterType((*ChainResponse)(nil), "byzantine.ChainResponse")
+	proto.RegisterType((*EchoResponse)(nil), "byzantine.EchoResponse")
+	proto.RegisterType((*ReadyResponse)(nil), "byzantine.ReadyResponse")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -214,296 +250,159 @@ var _ grpc.ClientConn
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion4
 
-// Client API for RouteGuide service
+// Client API for PubBroker service
 
-type RouteGuideClient interface {
-	// A simple RPC.
-	//
-	// Obtains the feature at a given position.
-	//
-	// A feature with an empty name is returned if there's no feature at the given
-	// position.
-	GetFeature(ctx context.Context, in *Point, opts ...grpc.CallOption) (*Feature, error)
-	// A server-to-client streaming RPC.
-	//
-	// Obtains the Features available within the given Rectangle.  Results are
-	// streamed rather than returned at once (e.g. in a response message with a
-	// repeated field), as the rectangle may cover a large area and contain a
-	// huge number of features.
-	ListFeatures(ctx context.Context, in *Rectangle, opts ...grpc.CallOption) (RouteGuide_ListFeaturesClient, error)
-	// A client-to-server streaming RPC.
-	//
-	// Accepts a stream of Points on a route being traversed, returning a
-	// RouteSummary when traversal is completed.
-	RecordRoute(ctx context.Context, opts ...grpc.CallOption) (RouteGuide_RecordRouteClient, error)
-	// A Bidirectional streaming RPC.
-	//
-	// Accepts a stream of RouteNotes sent while a route is being traversed,
-	// while receiving other RouteNotes (e.g. from other users).
-	RouteChat(ctx context.Context, opts ...grpc.CallOption) (RouteGuide_RouteChatClient, error)
+type PubBrokerClient interface {
+	Publish(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*PubResponse, error)
 }
 
-type routeGuideClient struct {
+type pubBrokerClient struct {
 	cc *grpc.ClientConn
 }
 
-func NewRouteGuideClient(cc *grpc.ClientConn) RouteGuideClient {
-	return &routeGuideClient{cc}
+func NewPubBrokerClient(cc *grpc.ClientConn) PubBrokerClient {
+	return &pubBrokerClient{cc}
 }
 
-func (c *routeGuideClient) GetFeature(ctx context.Context, in *Point, opts ...grpc.CallOption) (*Feature, error) {
-	out := new(Feature)
-	err := grpc.Invoke(ctx, "/byzantine.RouteGuide/GetFeature", in, out, c.cc, opts...)
+func (c *pubBrokerClient) Publish(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*PubResponse, error) {
+	out := new(PubResponse)
+	err := grpc.Invoke(ctx, "/byzantine.PubBroker/Publish", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *routeGuideClient) ListFeatures(ctx context.Context, in *Rectangle, opts ...grpc.CallOption) (RouteGuide_ListFeaturesClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_RouteGuide_serviceDesc.Streams[0], c.cc, "/byzantine.RouteGuide/ListFeatures", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &routeGuideListFeaturesClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
+// Server API for PubBroker service
+
+type PubBrokerServer interface {
+	Publish(context.Context, *Publication) (*PubResponse, error)
 }
 
-type RouteGuide_ListFeaturesClient interface {
-	Recv() (*Feature, error)
-	grpc.ClientStream
+func RegisterPubBrokerServer(s *grpc.Server, srv PubBrokerServer) {
+	s.RegisterService(&_PubBroker_serviceDesc, srv)
 }
 
-type routeGuideListFeaturesClient struct {
-	grpc.ClientStream
-}
-
-func (x *routeGuideListFeaturesClient) Recv() (*Feature, error) {
-	m := new(Feature)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-func (c *routeGuideClient) RecordRoute(ctx context.Context, opts ...grpc.CallOption) (RouteGuide_RecordRouteClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_RouteGuide_serviceDesc.Streams[1], c.cc, "/byzantine.RouteGuide/RecordRoute", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &routeGuideRecordRouteClient{stream}
-	return x, nil
-}
-
-type RouteGuide_RecordRouteClient interface {
-	Send(*Point) error
-	CloseAndRecv() (*RouteSummary, error)
-	grpc.ClientStream
-}
-
-type routeGuideRecordRouteClient struct {
-	grpc.ClientStream
-}
-
-func (x *routeGuideRecordRouteClient) Send(m *Point) error {
-	return x.ClientStream.SendMsg(m)
-}
-
-func (x *routeGuideRecordRouteClient) CloseAndRecv() (*RouteSummary, error) {
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	m := new(RouteSummary)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-func (c *routeGuideClient) RouteChat(ctx context.Context, opts ...grpc.CallOption) (RouteGuide_RouteChatClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_RouteGuide_serviceDesc.Streams[2], c.cc, "/byzantine.RouteGuide/RouteChat", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &routeGuideRouteChatClient{stream}
-	return x, nil
-}
-
-type RouteGuide_RouteChatClient interface {
-	Send(*RouteNote) error
-	Recv() (*RouteNote, error)
-	grpc.ClientStream
-}
-
-type routeGuideRouteChatClient struct {
-	grpc.ClientStream
-}
-
-func (x *routeGuideRouteChatClient) Send(m *RouteNote) error {
-	return x.ClientStream.SendMsg(m)
-}
-
-func (x *routeGuideRouteChatClient) Recv() (*RouteNote, error) {
-	m := new(RouteNote)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-// Server API for RouteGuide service
-
-type RouteGuideServer interface {
-	// A simple RPC.
-	//
-	// Obtains the feature at a given position.
-	//
-	// A feature with an empty name is returned if there's no feature at the given
-	// position.
-	GetFeature(context.Context, *Point) (*Feature, error)
-	// A server-to-client streaming RPC.
-	//
-	// Obtains the Features available within the given Rectangle.  Results are
-	// streamed rather than returned at once (e.g. in a response message with a
-	// repeated field), as the rectangle may cover a large area and contain a
-	// huge number of features.
-	ListFeatures(*Rectangle, RouteGuide_ListFeaturesServer) error
-	// A client-to-server streaming RPC.
-	//
-	// Accepts a stream of Points on a route being traversed, returning a
-	// RouteSummary when traversal is completed.
-	RecordRoute(RouteGuide_RecordRouteServer) error
-	// A Bidirectional streaming RPC.
-	//
-	// Accepts a stream of RouteNotes sent while a route is being traversed,
-	// while receiving other RouteNotes (e.g. from other users).
-	RouteChat(RouteGuide_RouteChatServer) error
-}
-
-func RegisterRouteGuideServer(s *grpc.Server, srv RouteGuideServer) {
-	s.RegisterService(&_RouteGuide_serviceDesc, srv)
-}
-
-func _RouteGuide_GetFeature_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Point)
+func _PubBroker_Publish_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Publication)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(RouteGuideServer).GetFeature(ctx, in)
+		return srv.(PubBrokerServer).Publish(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/byzantine.RouteGuide/GetFeature",
+		FullMethod: "/byzantine.PubBroker/Publish",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RouteGuideServer).GetFeature(ctx, req.(*Point))
+		return srv.(PubBrokerServer).Publish(ctx, req.(*Publication))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _RouteGuide_ListFeatures_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(Rectangle)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(RouteGuideServer).ListFeatures(m, &routeGuideListFeaturesServer{stream})
-}
-
-type RouteGuide_ListFeaturesServer interface {
-	Send(*Feature) error
-	grpc.ServerStream
-}
-
-type routeGuideListFeaturesServer struct {
-	grpc.ServerStream
-}
-
-func (x *routeGuideListFeaturesServer) Send(m *Feature) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func _RouteGuide_RecordRoute_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(RouteGuideServer).RecordRoute(&routeGuideRecordRouteServer{stream})
-}
-
-type RouteGuide_RecordRouteServer interface {
-	SendAndClose(*RouteSummary) error
-	Recv() (*Point, error)
-	grpc.ServerStream
-}
-
-type routeGuideRecordRouteServer struct {
-	grpc.ServerStream
-}
-
-func (x *routeGuideRecordRouteServer) SendAndClose(m *RouteSummary) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func (x *routeGuideRecordRouteServer) Recv() (*Point, error) {
-	m := new(Point)
-	if err := x.ServerStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-func _RouteGuide_RouteChat_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(RouteGuideServer).RouteChat(&routeGuideRouteChatServer{stream})
-}
-
-type RouteGuide_RouteChatServer interface {
-	Send(*RouteNote) error
-	Recv() (*RouteNote, error)
-	grpc.ServerStream
-}
-
-type routeGuideRouteChatServer struct {
-	grpc.ServerStream
-}
-
-func (x *routeGuideRouteChatServer) Send(m *RouteNote) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func (x *routeGuideRouteChatServer) Recv() (*RouteNote, error) {
-	m := new(RouteNote)
-	if err := x.ServerStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-var _RouteGuide_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "byzantine.RouteGuide",
-	HandlerType: (*RouteGuideServer)(nil),
+var _PubBroker_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "byzantine.PubBroker",
+	HandlerType: (*PubBrokerServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GetFeature",
-			Handler:    _RouteGuide_GetFeature_Handler,
+			MethodName: "Publish",
+			Handler:    _PubBroker_Publish_Handler,
 		},
 	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "byzantine.proto",
+}
+
+// Client API for SubBroker service
+
+type SubBrokerClient interface {
+	Subscribe(ctx context.Context, opts ...grpc.CallOption) (SubBroker_SubscribeClient, error)
+}
+
+type subBrokerClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewSubBrokerClient(cc *grpc.ClientConn) SubBrokerClient {
+	return &subBrokerClient{cc}
+}
+
+func (c *subBrokerClient) Subscribe(ctx context.Context, opts ...grpc.CallOption) (SubBroker_SubscribeClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_SubBroker_serviceDesc.Streams[0], c.cc, "/byzantine.SubBroker/Subscribe", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &subBrokerSubscribeClient{stream}
+	return x, nil
+}
+
+type SubBroker_SubscribeClient interface {
+	Send(*SubRequest) error
+	Recv() (*Publication, error)
+	grpc.ClientStream
+}
+
+type subBrokerSubscribeClient struct {
+	grpc.ClientStream
+}
+
+func (x *subBrokerSubscribeClient) Send(m *SubRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *subBrokerSubscribeClient) Recv() (*Publication, error) {
+	m := new(Publication)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+// Server API for SubBroker service
+
+type SubBrokerServer interface {
+	Subscribe(SubBroker_SubscribeServer) error
+}
+
+func RegisterSubBrokerServer(s *grpc.Server, srv SubBrokerServer) {
+	s.RegisterService(&_SubBroker_serviceDesc, srv)
+}
+
+func _SubBroker_Subscribe_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(SubBrokerServer).Subscribe(&subBrokerSubscribeServer{stream})
+}
+
+type SubBroker_SubscribeServer interface {
+	Send(*Publication) error
+	Recv() (*SubRequest, error)
+	grpc.ServerStream
+}
+
+type subBrokerSubscribeServer struct {
+	grpc.ServerStream
+}
+
+func (x *subBrokerSubscribeServer) Send(m *Publication) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *subBrokerSubscribeServer) Recv() (*SubRequest, error) {
+	m := new(SubRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+var _SubBroker_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "byzantine.SubBroker",
+	HandlerType: (*SubBrokerServer)(nil),
+	Methods:     []grpc.MethodDesc{},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "ListFeatures",
-			Handler:       _RouteGuide_ListFeatures_Handler,
-			ServerStreams: true,
-		},
-		{
-			StreamName:    "RecordRoute",
-			Handler:       _RouteGuide_RecordRoute_Handler,
-			ClientStreams: true,
-		},
-		{
-			StreamName:    "RouteChat",
-			Handler:       _RouteGuide_RouteChat_Handler,
+			StreamName:    "Subscribe",
+			Handler:       _SubBroker_Subscribe_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},
@@ -511,34 +410,171 @@ var _RouteGuide_serviceDesc = grpc.ServiceDesc{
 	Metadata: "byzantine.proto",
 }
 
+// Client API for InterBroker service
+
+type InterBrokerClient interface {
+	Echo(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*EchoResponse, error)
+	Ready(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*ReadyResponse, error)
+	Chain(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*ChainResponse, error)
+}
+
+type interBrokerClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewInterBrokerClient(cc *grpc.ClientConn) InterBrokerClient {
+	return &interBrokerClient{cc}
+}
+
+func (c *interBrokerClient) Echo(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*EchoResponse, error) {
+	out := new(EchoResponse)
+	err := grpc.Invoke(ctx, "/byzantine.InterBroker/Echo", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *interBrokerClient) Ready(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*ReadyResponse, error) {
+	out := new(ReadyResponse)
+	err := grpc.Invoke(ctx, "/byzantine.InterBroker/Ready", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *interBrokerClient) Chain(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*ChainResponse, error) {
+	out := new(ChainResponse)
+	err := grpc.Invoke(ctx, "/byzantine.InterBroker/Chain", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// Server API for InterBroker service
+
+type InterBrokerServer interface {
+	Echo(context.Context, *Publication) (*EchoResponse, error)
+	Ready(context.Context, *Publication) (*ReadyResponse, error)
+	Chain(context.Context, *Publication) (*ChainResponse, error)
+}
+
+func RegisterInterBrokerServer(s *grpc.Server, srv InterBrokerServer) {
+	s.RegisterService(&_InterBroker_serviceDesc, srv)
+}
+
+func _InterBroker_Echo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Publication)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InterBrokerServer).Echo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/byzantine.InterBroker/Echo",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InterBrokerServer).Echo(ctx, req.(*Publication))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InterBroker_Ready_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Publication)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InterBrokerServer).Ready(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/byzantine.InterBroker/Ready",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InterBrokerServer).Ready(ctx, req.(*Publication))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InterBroker_Chain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Publication)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InterBrokerServer).Chain(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/byzantine.InterBroker/Chain",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InterBrokerServer).Chain(ctx, req.(*Publication))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _InterBroker_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "byzantine.InterBroker",
+	HandlerType: (*InterBrokerServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Echo",
+			Handler:    _InterBroker_Echo_Handler,
+		},
+		{
+			MethodName: "Ready",
+			Handler:    _InterBroker_Ready_Handler,
+		},
+		{
+			MethodName: "Chain",
+			Handler:    _InterBroker_Chain_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "byzantine.proto",
+}
+
 func init() { proto.RegisterFile("byzantine.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 408 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x53, 0x4d, 0x8b, 0xd4, 0x40,
-	0x10, 0xdd, 0x1e, 0x77, 0xdd, 0x49, 0x25, 0xb2, 0x52, 0x08, 0x86, 0x28, 0xb8, 0xc6, 0xcb, 0x1e,
-	0x24, 0x0c, 0xab, 0xc7, 0xf5, 0xe0, 0x0e, 0x38, 0x07, 0x45, 0x87, 0x8c, 0xf7, 0xa1, 0x27, 0x29,
-	0x33, 0x0d, 0x9d, 0xee, 0x90, 0x74, 0xc0, 0xf1, 0x6f, 0xf8, 0x7b, 0x05, 0x49, 0xe7, 0x63, 0x32,
-	0x18, 0xd9, 0x5b, 0xd7, 0xab, 0xf7, 0xea, 0xe3, 0x15, 0x0d, 0x57, 0xbb, 0xc3, 0x2f, 0xae, 0x8c,
-	0x50, 0x14, 0x15, 0xa5, 0x36, 0x1a, 0x9d, 0x01, 0x08, 0x3f, 0xc2, 0xc5, 0x5a, 0x0b, 0x65, 0x30,
-	0x80, 0xb9, 0xe4, 0x46, 0x98, 0x3a, 0x25, 0x9f, 0x5d, 0xb3, 0x9b, 0x8b, 0x78, 0x88, 0xf1, 0x25,
-	0x38, 0x52, 0xab, 0xac, 0x4d, 0xce, 0x6c, 0xf2, 0x08, 0x84, 0xdf, 0xc0, 0x89, 0x29, 0x31, 0x5c,
-	0x65, 0x92, 0xf0, 0x1a, 0x66, 0x52, 0xdb, 0x02, 0xee, 0xed, 0xd3, 0xe8, 0xd8, 0xd8, 0x36, 0x89,
-	0x67, 0x52, 0x37, 0x8c, 0xbd, 0xb0, 0x55, 0x26, 0x19, 0x7b, 0x11, 0x7e, 0x86, 0xcb, 0x4f, 0xc4,
-	0x4d, 0x5d, 0x12, 0x22, 0x9c, 0x2b, 0x9e, 0xb7, 0x13, 0x39, 0xb1, 0x7d, 0xe3, 0x5b, 0x98, 0x4b,
-	0x9d, 0x70, 0x23, 0xb4, 0xfa, 0x6f, 0x99, 0x81, 0x11, 0x6e, 0xc0, 0x89, 0x75, 0x6d, 0xe8, 0xab,
-	0x36, 0xa7, 0x52, 0xf6, 0x90, 0x14, 0x7d, 0xb8, 0xcc, 0xa9, 0xaa, 0x78, 0xd6, 0x2e, 0xed, 0xc4,
-	0x7d, 0x18, 0xfe, 0x66, 0xe0, 0xd9, 0xaa, 0x9b, 0x3a, 0xcf, 0x79, 0x79, 0xc0, 0x57, 0xe0, 0x16,
-	0x8d, 0x7a, 0x9b, 0xe8, 0x5a, 0x99, 0xce, 0x40, 0xb0, 0xd0, 0xb2, 0x41, 0xf0, 0x0d, 0x3c, 0xf9,
-	0xd1, 0xee, 0xd4, 0x51, 0x5a, 0x1b, 0xbd, 0x0e, 0x6c, 0x49, 0x01, 0xcc, 0x53, 0x51, 0x19, 0xae,
-	0x12, 0xf2, 0x1f, 0xb5, 0x37, 0xe8, 0x63, 0x7c, 0x0d, 0x1e, 0x49, 0x5e, 0x54, 0x94, 0x6e, 0x8d,
-	0xc8, 0xc9, 0x3f, 0xb7, 0x79, 0xb7, 0xc3, 0xbe, 0x8b, 0x9c, 0x6e, 0xff, 0x30, 0x00, 0x3b, 0xd5,
-	0xaa, 0x16, 0x29, 0xe1, 0x7b, 0x80, 0x15, 0x99, 0xde, 0xc9, 0x7f, 0x16, 0x0d, 0x70, 0x84, 0x74,
-	0xac, 0xf0, 0x0c, 0xef, 0xc0, 0xfb, 0x22, 0xaa, 0x5e, 0x56, 0xe1, 0xb3, 0x11, 0x6b, 0x38, 0xf3,
-	0xb4, 0x76, 0xc1, 0xf0, 0x0e, 0xdc, 0x98, 0x12, 0x5d, 0xa6, 0x76, 0x8e, 0x89, 0xa6, 0xcf, 0xc7,
-	0xe5, 0x46, 0x0e, 0x86, 0x67, 0x37, 0x0c, 0x3f, 0x74, 0xb7, 0x5a, 0xee, 0xb9, 0x39, 0x6d, 0xdc,
-	0x5f, 0x30, 0x98, 0x44, 0x1b, 0xf1, 0x82, 0xdd, 0x2f, 0xe0, 0x85, 0xd0, 0x51, 0x56, 0x16, 0x49,
-	0x44, 0x3f, 0x79, 0x5e, 0x48, 0xaa, 0xa2, 0xb2, 0xe1, 0x64, 0x8d, 0x1f, 0xf7, 0x57, 0x47, 0x6f,
-	0xd6, 0xcd, 0x37, 0x58, 0xb3, 0xdd, 0x63, 0xfb, 0x1f, 0xde, 0xfd, 0x0d, 0x00, 0x00, 0xff, 0xff,
-	0x24, 0xa3, 0x35, 0xcb, 0x22, 0x03, 0x00, 0x00,
+	// 525 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x54, 0xc1, 0x8e, 0xd3, 0x30,
+	0x14, 0xc4, 0x69, 0xbb, 0xdb, 0xbc, 0xb6, 0xb0, 0x18, 0x4a, 0xa3, 0x02, 0x52, 0x64, 0x2d, 0x22,
+	0xea, 0x61, 0x03, 0xe5, 0x56, 0x2e, 0x2c, 0x2d, 0x88, 0x22, 0xad, 0x54, 0xb9, 0xd5, 0x8a, 0x23,
+	0x49, 0xd6, 0xda, 0x46, 0x74, 0xe3, 0x10, 0x27, 0x87, 0x72, 0xe4, 0xc0, 0x0f, 0xf0, 0x69, 0xfc,
+	0x02, 0x9f, 0xc0, 0x07, 0xa0, 0xbc, 0xd6, 0xa9, 0xbb, 0xa8, 0x12, 0x37, 0xcf, 0x78, 0x32, 0xcf,
+	0x33, 0xb6, 0x02, 0xf7, 0xc2, 0xf5, 0xb7, 0x20, 0xc9, 0xe3, 0x44, 0x9c, 0xa5, 0x99, 0xcc, 0x25,
+	0xb5, 0x2b, 0xa2, 0xff, 0xe4, 0x5a, 0xca, 0xeb, 0x95, 0xf0, 0x83, 0x34, 0xf6, 0x83, 0x24, 0x91,
+	0x79, 0x90, 0xc7, 0x32, 0x51, 0x1b, 0x21, 0xfb, 0x61, 0x41, 0x6b, 0x56, 0x84, 0xab, 0x38, 0x42,
+	0x9a, 0x3a, 0x70, 0x3c, 0x2b, 0xc2, 0xc5, 0x3a, 0x15, 0x0e, 0x71, 0x89, 0xd7, 0xe1, 0x1a, 0x52,
+	0x77, 0x2b, 0x54, 0x4b, 0x91, 0x4d, 0x27, 0x8e, 0xe5, 0x12, 0xaf, 0xce, 0x4d, 0x8a, 0x9e, 0x42,
+	0xc7, 0xb0, 0x9a, 0x4e, 0x9c, 0x9a, 0x4b, 0x3c, 0xca, 0xf7, 0xc9, 0x72, 0xc2, 0x42, 0xa6, 0x71,
+	0x34, 0x9d, 0x38, 0x75, 0xf4, 0xd0, 0x90, 0xf6, 0xa1, 0xf9, 0x36, 0x93, 0x5f, 0xd0, 0xbe, 0x81,
+	0x5b, 0x15, 0x2e, 0xf7, 0xc6, 0x32, 0xc9, 0x45, 0x92, 0x2b, 0xe7, 0xc8, 0xad, 0x79, 0x6d, 0x5e,
+	0x61, 0x7a, 0x02, 0xb5, 0x8b, 0xf3, 0xb1, 0x73, 0xec, 0x12, 0xaf, 0xcd, 0xcb, 0x25, 0x7d, 0x09,
+	0xf6, 0x78, 0x19, 0xc4, 0xc9, 0xc5, 0xf9, 0x58, 0x39, 0x4d, 0xb7, 0xe6, 0xb5, 0x86, 0x0f, 0xce,
+	0x76, 0x1d, 0xe9, 0x3d, 0xbe, 0x53, 0xb1, 0xe7, 0x18, 0x8f, 0x0b, 0x95, 0xca, 0x44, 0x89, 0xf2,
+	0x94, 0xf3, 0x22, 0x8a, 0x84, 0x52, 0xd8, 0x43, 0x93, 0x6b, 0xc8, 0x3e, 0x02, 0xcc, 0x4b, 0xe1,
+	0xd7, 0x42, 0xa8, 0xfc, 0x76, 0x2b, 0xe4, 0xdf, 0x56, 0xcc, 0x54, 0xd6, 0x7e, 0x2a, 0xf6, 0x06,
+	0x9a, 0xfa, 0x04, 0x94, 0x42, 0xfd, 0x7d, 0x26, 0x6f, 0xd0, 0xc2, 0xe6, 0xb8, 0xa6, 0x77, 0xc1,
+	0x5a, 0x48, 0xfc, 0xca, 0xe6, 0xd6, 0x42, 0xea, 0xa4, 0xb5, 0x2a, 0x29, 0x7b, 0x06, 0x1d, 0x74,
+	0xa8, 0x0e, 0xfe, 0x10, 0x1a, 0x97, 0xc1, 0x2a, 0xbe, 0xda, 0x1e, 0x7b, 0x03, 0xd8, 0x29, 0xb4,
+	0xdf, 0x45, 0x4b, 0x69, 0xaa, 0x3e, 0x88, 0xd5, 0x4a, 0x6a, 0x15, 0x82, 0xd2, 0x8c, 0x8b, 0xe0,
+	0x6a, 0x6d, 0xca, 0x90, 0xd0, 0x32, 0x04, 0x43, 0x01, 0xf6, 0xac, 0x08, 0x37, 0x21, 0xe8, 0x27,
+	0x7c, 0x30, 0x65, 0x5a, 0xfa, 0xc8, 0xa8, 0xd8, 0xb8, 0xf3, 0xfe, 0x2d, 0x5e, 0xbb, 0xb3, 0xa7,
+	0xdf, 0x7f, 0xfd, 0xfe, 0x69, 0xf5, 0x18, 0xf5, 0x53, 0xdd, 0x97, 0x5e, 0x8d, 0xc8, 0x60, 0x78,
+	0x03, 0xf6, 0xbc, 0x1a, 0xf3, 0x19, 0x81, 0x8a, 0xb2, 0x38, 0x14, 0xb4, 0x6b, 0x18, 0xee, 0xee,
+	0xa2, 0x7f, 0x60, 0x3e, 0x73, 0x71, 0x4e, 0x9f, 0x75, 0x7d, 0xa5, 0x2d, 0xb2, 0xdd, 0x72, 0x44,
+	0x06, 0x1e, 0x79, 0x41, 0x86, 0x7f, 0x08, 0xb4, 0xa6, 0x49, 0x2e, 0xb2, 0xed, 0xc4, 0x19, 0xd4,
+	0xcb, 0xca, 0x0e, 0xa6, 0xea, 0x19, 0xbc, 0xd9, 0x2d, 0xeb, 0xe1, 0xb8, 0xfb, 0xac, 0xed, 0x87,
+	0xe8, 0xe4, 0x8b, 0x68, 0x29, 0x47, 0x64, 0x40, 0x2f, 0xb7, 0x6d, 0x1e, 0xb4, 0x74, 0x0c, 0x7e,
+	0xef, 0x22, 0xd8, 0x63, 0xf4, 0xec, 0xb2, 0x13, 0xa3, 0xaa, 0xac, 0x54, 0x94, 0xbe, 0xaf, 0xa1,
+	0x81, 0x6f, 0xe0, 0xbf, 0x7c, 0xf7, 0x5e, 0x0b, 0xbb, 0x13, 0x1e, 0xe1, 0x7f, 0xe0, 0xd5, 0xdf,
+	0x00, 0x00, 0x00, 0xff, 0xff, 0xb3, 0x66, 0x24, 0x37, 0x43, 0x04, 0x00, 0x00,
 }

@@ -15,6 +15,15 @@ message Publication {
     repeated ChainMAC ChainMACs = 8;
 }
 
+message PubResponse {
+    bool Success = 1;
+}
+
+message SubRequest {
+    uint64 PublisherID = 1;
+    uint64 BrokerID = 2;
+}
+
 
 message ChainMAC {
     string From = 1;
@@ -22,24 +31,48 @@ message ChainMAC {
     bytes MAC = 3;
 }
 
+message ChainResponse {
+    bool Valid = 1;
+}
+
 message EchoResponse {
-    int32 Hello = 1;
+    bool Hello = 1;
 }
 
 message ReadyResponse {
-    int32 Ready = 1;
+    bool Ready = 1;
 }
 
 service PubBroker {
-    rpc Publish (Publication) returns (PubResponse) {}
+    rpc Publish (Publication) returns (PubResponse) {
+        option (google.api.http) = {
+            post: "/publisher/publish"
+            body: "*"
+        };
+    }
 }
 
 service SubBroker {
-    rpc Subscribe (stream SubRequest) returns (stream Publication) {}
+        rpc Subscribe (stream SubRequest) returns (stream Publication) {
+            option (google.api.http) = {
+                post: "/subscriber/subscribe"
+                body: "*"
+            };
+        }
 }
 
 service InterBroker {
-    rpc Echo (Publication) returns (EchoResponse) {}
-    rpc Ready (Publication) returns (ReadyResponse) {}
+    rpc Echo (Publication) returns (EchoResponse) {
+        option (google.api.http) = {
+            post: "/broker/echo"
+            body: "*"
+        };
+    }
+    rpc Ready (Publication) returns (ReadyResponse) {
+        option (google.api.http) = {
+            post: "/publisher/ready"
+            body: "*"
+        };
+    }
     rpc Chain (Publication) returns (ChainResponse) {}
 }

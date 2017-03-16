@@ -1,0 +1,232 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "byzantine.proto",
+    "version": "version not set"
+  },
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/broker/echo": {
+      "post": {
+        "operationId": "Echo",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/byzantineEchoResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/byzantinePublication"
+            }
+          }
+        ],
+        "tags": [
+          "InterBroker"
+        ]
+      }
+    },
+    "/publisher/publish": {
+      "post": {
+        "operationId": "Publish",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/byzantinePubResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/byzantinePublication"
+            }
+          }
+        ],
+        "tags": [
+          "PubBroker"
+        ]
+      }
+    },
+    "/publisher/ready": {
+      "post": {
+        "operationId": "Ready",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/byzantineReadyResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/byzantinePublication"
+            }
+          }
+        ],
+        "tags": [
+          "InterBroker"
+        ]
+      }
+    },
+    "/subscriber/subscribe": {
+      "post": {
+        "operationId": "Subscribe",
+        "responses": {
+          "200": {
+            "description": "(streaming responses)",
+            "schema": {
+              "$ref": "#/definitions/byzantinePublication"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "(streaming inputs)",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/byzantineSubRequest"
+            }
+          }
+        ],
+        "tags": [
+          "SubBroker"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "byzantineChainMAC": {
+      "type": "object",
+      "properties": {
+        "From": {
+          "type": "string"
+        },
+        "To": {
+          "type": "string"
+        },
+        "MAC": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
+    "byzantineChainResponse": {
+      "type": "object",
+      "properties": {
+        "Valid": {
+          "type": "boolean",
+          "format": "boolean"
+        }
+      }
+    },
+    "byzantineEchoResponse": {
+      "type": "object",
+      "properties": {
+        "Hello": {
+          "type": "boolean",
+          "format": "boolean"
+        }
+      }
+    },
+    "byzantinePubResponse": {
+      "type": "object",
+      "properties": {
+        "Success": {
+          "type": "boolean",
+          "format": "boolean"
+        }
+      }
+    },
+    "byzantinePublication": {
+      "type": "object",
+      "properties": {
+        "PubType": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "PublisherID": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "PublicationID": {
+          "type": "string",
+          "format": "int64"
+        },
+        "TopicID": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "BrokerID": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "Contents": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "byte"
+          }
+        },
+        "MAC": {
+          "type": "string",
+          "format": "byte"
+        },
+        "ChainMACs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/byzantineChainMAC"
+          }
+        }
+      }
+    },
+    "byzantineReadyResponse": {
+      "type": "object",
+      "properties": {
+        "Ready": {
+          "type": "boolean",
+          "format": "boolean"
+        }
+      }
+    },
+    "byzantineSubRequest": {
+      "type": "object",
+      "properties": {
+        "PublisherID": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "BrokerID": {
+          "type": "string",
+          "format": "uint64"
+        }
+      }
+    }
+  }
+}
