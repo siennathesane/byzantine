@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+import "google/api/annotations.proto";
+
+package byzantine;
+
+message Publication {
+    uint32 PubType = 1;
+    uint64 PublisherID = 2;
+    sint64 PublicationID = 3;
+    uint64 TopicID = 4;
+    uint64 BrokerID = 5;
+    repeated bytes Contents = 6;
+    bytes MAC = 7;
+    repeated ChainMAC ChainMACs = 8;
+}
+
+
+message ChainMAC {
+    string From = 1;
+    string To = 2;
+    bytes MAC = 3;
+}
+
+message EchoResponse {
+    int32 Hello = 1;
+}
+
+message ReadyResponse {
+    int32 Ready = 1;
+}
+
+service PubBroker {
+    rpc Publish (Publication) returns (PubResponse) {}
+}
+
+service SubBroker {
+    rpc Subscribe (stream SubRequest) returns (stream Publication) {}
+}
+
+service InterBroker {
+    rpc Echo (Publication) returns (EchoResponse) {}
+    rpc Ready (Publication) returns (ReadyResponse) {}
+    rpc Chain (Publication) returns (ChainResponse) {}
+}
