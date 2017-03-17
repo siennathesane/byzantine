@@ -37,13 +37,13 @@
           }
         ],
         "tags": [
-          "InterBroker"
+          "Broker"
         ]
       }
     },
-    "/publisher/publish": {
+    "/broker/pull/{PublisherID}": {
       "post": {
-        "operationId": "Publish",
+        "operationId": "Receive",
         "responses": {
           "200": {
             "description": "",
@@ -54,6 +54,13 @@
         },
         "parameters": [
           {
+            "name": "PublisherID",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uint64"
+          },
+          {
             "name": "body",
             "in": "body",
             "required": true,
@@ -63,11 +70,43 @@
           }
         ],
         "tags": [
-          "PubBroker"
+          "Broker"
         ]
       }
     },
-    "/publisher/ready": {
+    "/broker/push": {
+      "get": {
+        "operationId": "Push",
+        "responses": {
+          "200": {
+            "description": "(streaming responses)",
+            "schema": {
+              "$ref": "#/definitions/byzantinePublication"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "PublisherID",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "uint64"
+          },
+          {
+            "name": "BrokerID",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "uint64"
+          }
+        ],
+        "tags": [
+          "Broker"
+        ]
+      }
+    },
+    "/broker/ready": {
       "post": {
         "operationId": "Ready",
         "responses": {
@@ -89,7 +128,78 @@
           }
         ],
         "tags": [
-          "InterBroker"
+          "Broker"
+        ]
+      }
+    },
+    "/broker/register/{PoolID}": {
+      "post": {
+        "operationId": "RegisterSubscriber",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/byzantineReadyResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "PoolID",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uint64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/byzantineSubscriber"
+            }
+          }
+        ],
+        "tags": [
+          "Broker"
+        ]
+      }
+    },
+    "/broker/subscribers": {
+      "get": {
+        "operationId": "GetSubscribers",
+        "responses": {
+          "200": {
+            "description": "(streaming responses)",
+            "schema": {
+              "$ref": "#/definitions/byzantineSubscriber"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Address",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "PoolID",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "uint64"
+          },
+          {
+            "name": "DestinationDistinguishment",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "uint64"
+          }
+        ],
+        "tags": [
+          "Broker"
         ]
       }
     },
@@ -98,16 +208,15 @@
         "operationId": "Subscribe",
         "responses": {
           "200": {
-            "description": "(streaming responses)",
+            "description": "",
             "schema": {
-              "$ref": "#/definitions/byzantinePublication"
+              "$ref": "#/definitions/byzantineReadyResponse"
             }
           }
         },
         "parameters": [
           {
             "name": "body",
-            "description": "(streaming inputs)",
             "in": "body",
             "required": true,
             "schema": {
@@ -116,7 +225,7 @@
           }
         ],
         "tags": [
-          "SubBroker"
+          "Subscribe"
         ]
       }
     }
@@ -204,7 +313,8 @@
             "$ref": "#/definitions/byzantineChainMAC"
           }
         }
-      }
+      },
+      "description": "/ Publication is the message sent out to the brokers, who pass it along to the subscribers."
     },
     "byzantineReadyResponse": {
       "type": "object",
@@ -227,6 +337,23 @@
           "format": "uint64"
         }
       }
+    },
+    "byzantineSubscriber": {
+      "type": "object",
+      "properties": {
+        "Address": {
+          "type": "string"
+        },
+        "PoolID": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "DestinationDistinguishment": {
+          "type": "string",
+          "format": "uint64"
+        }
+      },
+      "description": "/ Subscriber defines a subscriber within a subscriber pool."
     }
   }
 }

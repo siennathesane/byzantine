@@ -10,6 +10,8 @@ It is generated from these files:
 
 It has these top-level messages:
 	Publication
+	Publisher
+	Subscriber
 	PubResponse
 	SubRequest
 	ChainMAC
@@ -40,6 +42,7 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
+// / Publication is the message sent out to the brokers, who pass it along to the subscribers.
 type Publication struct {
 	PubType       uint32      `protobuf:"varint,1,opt,name=PubType" json:"PubType,omitempty"`
 	PublisherID   uint64      `protobuf:"varint,2,opt,name=PublisherID" json:"PublisherID,omitempty"`
@@ -112,6 +115,64 @@ func (m *Publication) GetChainMACs() []*ChainMAC {
 	return nil
 }
 
+// / Publisher defines a publisher within a quorum.
+type Publisher struct {
+	Address     string `protobuf:"bytes,1,opt,name=Address" json:"Address,omitempty"`
+	PublisherID uint64 `protobuf:"varint,2,opt,name=PublisherID" json:"PublisherID,omitempty"`
+}
+
+func (m *Publisher) Reset()                    { *m = Publisher{} }
+func (m *Publisher) String() string            { return proto.CompactTextString(m) }
+func (*Publisher) ProtoMessage()               {}
+func (*Publisher) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+
+func (m *Publisher) GetAddress() string {
+	if m != nil {
+		return m.Address
+	}
+	return ""
+}
+
+func (m *Publisher) GetPublisherID() uint64 {
+	if m != nil {
+		return m.PublisherID
+	}
+	return 0
+}
+
+// / Subscriber defines a subscriber within a subscriber pool.
+type Subscriber struct {
+	Address                    string `protobuf:"bytes,1,opt,name=Address" json:"Address,omitempty"`
+	PoolID                     uint64 `protobuf:"varint,2,opt,name=PoolID" json:"PoolID,omitempty"`
+	DestinationDistinguishment uint64 `protobuf:"varint,3,opt,name=DestinationDistinguishment" json:"DestinationDistinguishment,omitempty"`
+}
+
+func (m *Subscriber) Reset()                    { *m = Subscriber{} }
+func (m *Subscriber) String() string            { return proto.CompactTextString(m) }
+func (*Subscriber) ProtoMessage()               {}
+func (*Subscriber) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+
+func (m *Subscriber) GetAddress() string {
+	if m != nil {
+		return m.Address
+	}
+	return ""
+}
+
+func (m *Subscriber) GetPoolID() uint64 {
+	if m != nil {
+		return m.PoolID
+	}
+	return 0
+}
+
+func (m *Subscriber) GetDestinationDistinguishment() uint64 {
+	if m != nil {
+		return m.DestinationDistinguishment
+	}
+	return 0
+}
+
 type PubResponse struct {
 	Success bool `protobuf:"varint,1,opt,name=Success" json:"Success,omitempty"`
 }
@@ -119,7 +180,7 @@ type PubResponse struct {
 func (m *PubResponse) Reset()                    { *m = PubResponse{} }
 func (m *PubResponse) String() string            { return proto.CompactTextString(m) }
 func (*PubResponse) ProtoMessage()               {}
-func (*PubResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+func (*PubResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
 
 func (m *PubResponse) GetSuccess() bool {
 	if m != nil {
@@ -136,7 +197,7 @@ type SubRequest struct {
 func (m *SubRequest) Reset()                    { *m = SubRequest{} }
 func (m *SubRequest) String() string            { return proto.CompactTextString(m) }
 func (*SubRequest) ProtoMessage()               {}
-func (*SubRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+func (*SubRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
 
 func (m *SubRequest) GetPublisherID() uint64 {
 	if m != nil {
@@ -161,7 +222,7 @@ type ChainMAC struct {
 func (m *ChainMAC) Reset()                    { *m = ChainMAC{} }
 func (m *ChainMAC) String() string            { return proto.CompactTextString(m) }
 func (*ChainMAC) ProtoMessage()               {}
-func (*ChainMAC) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+func (*ChainMAC) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
 
 func (m *ChainMAC) GetFrom() string {
 	if m != nil {
@@ -191,7 +252,7 @@ type ChainResponse struct {
 func (m *ChainResponse) Reset()                    { *m = ChainResponse{} }
 func (m *ChainResponse) String() string            { return proto.CompactTextString(m) }
 func (*ChainResponse) ProtoMessage()               {}
-func (*ChainResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
+func (*ChainResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
 
 func (m *ChainResponse) GetValid() bool {
 	if m != nil {
@@ -207,7 +268,7 @@ type EchoResponse struct {
 func (m *EchoResponse) Reset()                    { *m = EchoResponse{} }
 func (m *EchoResponse) String() string            { return proto.CompactTextString(m) }
 func (*EchoResponse) ProtoMessage()               {}
-func (*EchoResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
+func (*EchoResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
 
 func (m *EchoResponse) GetHello() bool {
 	if m != nil {
@@ -223,7 +284,7 @@ type ReadyResponse struct {
 func (m *ReadyResponse) Reset()                    { *m = ReadyResponse{} }
 func (m *ReadyResponse) String() string            { return proto.CompactTextString(m) }
 func (*ReadyResponse) ProtoMessage()               {}
-func (*ReadyResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
+func (*ReadyResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
 
 func (m *ReadyResponse) GetReady() bool {
 	if m != nil {
@@ -234,6 +295,8 @@ func (m *ReadyResponse) GetReady() bool {
 
 func init() {
 	proto.RegisterType((*Publication)(nil), "byzantine.Publication")
+	proto.RegisterType((*Publisher)(nil), "byzantine.Publisher")
+	proto.RegisterType((*Subscriber)(nil), "byzantine.Subscriber")
 	proto.RegisterType((*PubResponse)(nil), "byzantine.PubResponse")
 	proto.RegisterType((*SubRequest)(nil), "byzantine.SubRequest")
 	proto.RegisterType((*ChainMAC)(nil), "byzantine.ChainMAC")
@@ -250,108 +313,182 @@ var _ grpc.ClientConn
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion4
 
-// Client API for PubBroker service
+// Client API for Subscribe service
 
-type PubBrokerClient interface {
-	Publish(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*PubResponse, error)
+type SubscribeClient interface {
+	Subscribe(ctx context.Context, in *SubRequest, opts ...grpc.CallOption) (*ReadyResponse, error)
 }
 
-type pubBrokerClient struct {
+type subscribeClient struct {
 	cc *grpc.ClientConn
 }
 
-func NewPubBrokerClient(cc *grpc.ClientConn) PubBrokerClient {
-	return &pubBrokerClient{cc}
+func NewSubscribeClient(cc *grpc.ClientConn) SubscribeClient {
+	return &subscribeClient{cc}
 }
 
-func (c *pubBrokerClient) Publish(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*PubResponse, error) {
-	out := new(PubResponse)
-	err := grpc.Invoke(ctx, "/byzantine.PubBroker/Publish", in, out, c.cc, opts...)
+func (c *subscribeClient) Subscribe(ctx context.Context, in *SubRequest, opts ...grpc.CallOption) (*ReadyResponse, error) {
+	out := new(ReadyResponse)
+	err := grpc.Invoke(ctx, "/byzantine.Subscribe/Subscribe", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// Server API for PubBroker service
+// Server API for Subscribe service
 
-type PubBrokerServer interface {
-	Publish(context.Context, *Publication) (*PubResponse, error)
+type SubscribeServer interface {
+	Subscribe(context.Context, *SubRequest) (*ReadyResponse, error)
 }
 
-func RegisterPubBrokerServer(s *grpc.Server, srv PubBrokerServer) {
-	s.RegisterService(&_PubBroker_serviceDesc, srv)
+func RegisterSubscribeServer(s *grpc.Server, srv SubscribeServer) {
+	s.RegisterService(&_Subscribe_serviceDesc, srv)
 }
 
-func _PubBroker_Publish_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Publication)
+func _Subscribe_Subscribe_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SubRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(PubBrokerServer).Publish(ctx, in)
+		return srv.(SubscribeServer).Subscribe(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/byzantine.PubBroker/Publish",
+		FullMethod: "/byzantine.Subscribe/Subscribe",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PubBrokerServer).Publish(ctx, req.(*Publication))
+		return srv.(SubscribeServer).Subscribe(ctx, req.(*SubRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-var _PubBroker_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "byzantine.PubBroker",
-	HandlerType: (*PubBrokerServer)(nil),
+var _Subscribe_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "byzantine.Subscribe",
+	HandlerType: (*SubscribeServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Publish",
-			Handler:    _PubBroker_Publish_Handler,
+			MethodName: "Subscribe",
+			Handler:    _Subscribe_Subscribe_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "byzantine.proto",
 }
 
-// Client API for SubBroker service
+// Client API for Broker service
 
-type SubBrokerClient interface {
-	Subscribe(ctx context.Context, opts ...grpc.CallOption) (SubBroker_SubscribeClient, error)
+type BrokerClient interface {
+	Echo(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*EchoResponse, error)
+	GetSubscribers(ctx context.Context, in *Subscriber, opts ...grpc.CallOption) (Broker_GetSubscribersClient, error)
+	RegisterSubscriber(ctx context.Context, in *Subscriber, opts ...grpc.CallOption) (*ReadyResponse, error)
+	Ready(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*ReadyResponse, error)
+	Receive(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*PubResponse, error)
+	Push(ctx context.Context, opts ...grpc.CallOption) (Broker_PushClient, error)
+	Chain(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*ChainResponse, error)
 }
 
-type subBrokerClient struct {
+type brokerClient struct {
 	cc *grpc.ClientConn
 }
 
-func NewSubBrokerClient(cc *grpc.ClientConn) SubBrokerClient {
-	return &subBrokerClient{cc}
+func NewBrokerClient(cc *grpc.ClientConn) BrokerClient {
+	return &brokerClient{cc}
 }
 
-func (c *subBrokerClient) Subscribe(ctx context.Context, opts ...grpc.CallOption) (SubBroker_SubscribeClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_SubBroker_serviceDesc.Streams[0], c.cc, "/byzantine.SubBroker/Subscribe", opts...)
+func (c *brokerClient) Echo(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*EchoResponse, error) {
+	out := new(EchoResponse)
+	err := grpc.Invoke(ctx, "/byzantine.Broker/Echo", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &subBrokerSubscribeClient{stream}
+	return out, nil
+}
+
+func (c *brokerClient) GetSubscribers(ctx context.Context, in *Subscriber, opts ...grpc.CallOption) (Broker_GetSubscribersClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_Broker_serviceDesc.Streams[0], c.cc, "/byzantine.Broker/GetSubscribers", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &brokerGetSubscribersClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
 	return x, nil
 }
 
-type SubBroker_SubscribeClient interface {
+type Broker_GetSubscribersClient interface {
+	Recv() (*Subscriber, error)
+	grpc.ClientStream
+}
+
+type brokerGetSubscribersClient struct {
+	grpc.ClientStream
+}
+
+func (x *brokerGetSubscribersClient) Recv() (*Subscriber, error) {
+	m := new(Subscriber)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *brokerClient) RegisterSubscriber(ctx context.Context, in *Subscriber, opts ...grpc.CallOption) (*ReadyResponse, error) {
+	out := new(ReadyResponse)
+	err := grpc.Invoke(ctx, "/byzantine.Broker/RegisterSubscriber", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *brokerClient) Ready(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*ReadyResponse, error) {
+	out := new(ReadyResponse)
+	err := grpc.Invoke(ctx, "/byzantine.Broker/Ready", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *brokerClient) Receive(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*PubResponse, error) {
+	out := new(PubResponse)
+	err := grpc.Invoke(ctx, "/byzantine.Broker/Receive", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *brokerClient) Push(ctx context.Context, opts ...grpc.CallOption) (Broker_PushClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_Broker_serviceDesc.Streams[1], c.cc, "/byzantine.Broker/Push", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &brokerPushClient{stream}
+	return x, nil
+}
+
+type Broker_PushClient interface {
 	Send(*SubRequest) error
 	Recv() (*Publication, error)
 	grpc.ClientStream
 }
 
-type subBrokerSubscribeClient struct {
+type brokerPushClient struct {
 	grpc.ClientStream
 }
 
-func (x *subBrokerSubscribeClient) Send(m *SubRequest) error {
+func (x *brokerPushClient) Send(m *SubRequest) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *subBrokerSubscribeClient) Recv() (*Publication, error) {
+func (x *brokerPushClient) Recv() (*Publication, error) {
 	m := new(Publication)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -359,35 +496,143 @@ func (x *subBrokerSubscribeClient) Recv() (*Publication, error) {
 	return m, nil
 }
 
-// Server API for SubBroker service
-
-type SubBrokerServer interface {
-	Subscribe(SubBroker_SubscribeServer) error
+func (c *brokerClient) Chain(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*ChainResponse, error) {
+	out := new(ChainResponse)
+	err := grpc.Invoke(ctx, "/byzantine.Broker/Chain", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
-func RegisterSubBrokerServer(s *grpc.Server, srv SubBrokerServer) {
-	s.RegisterService(&_SubBroker_serviceDesc, srv)
+// Server API for Broker service
+
+type BrokerServer interface {
+	Echo(context.Context, *Publication) (*EchoResponse, error)
+	GetSubscribers(*Subscriber, Broker_GetSubscribersServer) error
+	RegisterSubscriber(context.Context, *Subscriber) (*ReadyResponse, error)
+	Ready(context.Context, *Publication) (*ReadyResponse, error)
+	Receive(context.Context, *Publication) (*PubResponse, error)
+	Push(Broker_PushServer) error
+	Chain(context.Context, *Publication) (*ChainResponse, error)
 }
 
-func _SubBroker_Subscribe_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(SubBrokerServer).Subscribe(&subBrokerSubscribeServer{stream})
+func RegisterBrokerServer(s *grpc.Server, srv BrokerServer) {
+	s.RegisterService(&_Broker_serviceDesc, srv)
 }
 
-type SubBroker_SubscribeServer interface {
+func _Broker_Echo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Publication)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BrokerServer).Echo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/byzantine.Broker/Echo",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BrokerServer).Echo(ctx, req.(*Publication))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Broker_GetSubscribers_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(Subscriber)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(BrokerServer).GetSubscribers(m, &brokerGetSubscribersServer{stream})
+}
+
+type Broker_GetSubscribersServer interface {
+	Send(*Subscriber) error
+	grpc.ServerStream
+}
+
+type brokerGetSubscribersServer struct {
+	grpc.ServerStream
+}
+
+func (x *brokerGetSubscribersServer) Send(m *Subscriber) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _Broker_RegisterSubscriber_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Subscriber)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BrokerServer).RegisterSubscriber(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/byzantine.Broker/RegisterSubscriber",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BrokerServer).RegisterSubscriber(ctx, req.(*Subscriber))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Broker_Ready_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Publication)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BrokerServer).Ready(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/byzantine.Broker/Ready",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BrokerServer).Ready(ctx, req.(*Publication))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Broker_Receive_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Publication)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BrokerServer).Receive(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/byzantine.Broker/Receive",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BrokerServer).Receive(ctx, req.(*Publication))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Broker_Push_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(BrokerServer).Push(&brokerPushServer{stream})
+}
+
+type Broker_PushServer interface {
 	Send(*Publication) error
 	Recv() (*SubRequest, error)
 	grpc.ServerStream
 }
 
-type subBrokerSubscribeServer struct {
+type brokerPushServer struct {
 	grpc.ServerStream
 }
 
-func (x *subBrokerSubscribeServer) Send(m *Publication) error {
+func (x *brokerPushServer) Send(m *Publication) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *subBrokerSubscribeServer) Recv() (*SubRequest, error) {
+func (x *brokerPushServer) Recv() (*SubRequest, error) {
 	m := new(SubRequest)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -395,14 +640,58 @@ func (x *subBrokerSubscribeServer) Recv() (*SubRequest, error) {
 	return m, nil
 }
 
-var _SubBroker_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "byzantine.SubBroker",
-	HandlerType: (*SubBrokerServer)(nil),
-	Methods:     []grpc.MethodDesc{},
+func _Broker_Chain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Publication)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BrokerServer).Chain(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/byzantine.Broker/Chain",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BrokerServer).Chain(ctx, req.(*Publication))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _Broker_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "byzantine.Broker",
+	HandlerType: (*BrokerServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Echo",
+			Handler:    _Broker_Echo_Handler,
+		},
+		{
+			MethodName: "RegisterSubscriber",
+			Handler:    _Broker_RegisterSubscriber_Handler,
+		},
+		{
+			MethodName: "Ready",
+			Handler:    _Broker_Ready_Handler,
+		},
+		{
+			MethodName: "Receive",
+			Handler:    _Broker_Receive_Handler,
+		},
+		{
+			MethodName: "Chain",
+			Handler:    _Broker_Chain_Handler,
+		},
+	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "Subscribe",
-			Handler:       _SubBroker_Subscribe_Handler,
+			StreamName:    "GetSubscribers",
+			Handler:       _Broker_GetSubscribers_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "Push",
+			Handler:       _Broker_Push_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},
@@ -410,171 +699,50 @@ var _SubBroker_serviceDesc = grpc.ServiceDesc{
 	Metadata: "byzantine.proto",
 }
 
-// Client API for InterBroker service
-
-type InterBrokerClient interface {
-	Echo(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*EchoResponse, error)
-	Ready(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*ReadyResponse, error)
-	Chain(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*ChainResponse, error)
-}
-
-type interBrokerClient struct {
-	cc *grpc.ClientConn
-}
-
-func NewInterBrokerClient(cc *grpc.ClientConn) InterBrokerClient {
-	return &interBrokerClient{cc}
-}
-
-func (c *interBrokerClient) Echo(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*EchoResponse, error) {
-	out := new(EchoResponse)
-	err := grpc.Invoke(ctx, "/byzantine.InterBroker/Echo", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *interBrokerClient) Ready(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*ReadyResponse, error) {
-	out := new(ReadyResponse)
-	err := grpc.Invoke(ctx, "/byzantine.InterBroker/Ready", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *interBrokerClient) Chain(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*ChainResponse, error) {
-	out := new(ChainResponse)
-	err := grpc.Invoke(ctx, "/byzantine.InterBroker/Chain", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// Server API for InterBroker service
-
-type InterBrokerServer interface {
-	Echo(context.Context, *Publication) (*EchoResponse, error)
-	Ready(context.Context, *Publication) (*ReadyResponse, error)
-	Chain(context.Context, *Publication) (*ChainResponse, error)
-}
-
-func RegisterInterBrokerServer(s *grpc.Server, srv InterBrokerServer) {
-	s.RegisterService(&_InterBroker_serviceDesc, srv)
-}
-
-func _InterBroker_Echo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Publication)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(InterBrokerServer).Echo(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/byzantine.InterBroker/Echo",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InterBrokerServer).Echo(ctx, req.(*Publication))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _InterBroker_Ready_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Publication)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(InterBrokerServer).Ready(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/byzantine.InterBroker/Ready",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InterBrokerServer).Ready(ctx, req.(*Publication))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _InterBroker_Chain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Publication)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(InterBrokerServer).Chain(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/byzantine.InterBroker/Chain",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InterBrokerServer).Chain(ctx, req.(*Publication))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-var _InterBroker_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "byzantine.InterBroker",
-	HandlerType: (*InterBrokerServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "Echo",
-			Handler:    _InterBroker_Echo_Handler,
-		},
-		{
-			MethodName: "Ready",
-			Handler:    _InterBroker_Ready_Handler,
-		},
-		{
-			MethodName: "Chain",
-			Handler:    _InterBroker_Chain_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "byzantine.proto",
-}
-
 func init() { proto.RegisterFile("byzantine.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 525 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x54, 0xc1, 0x8e, 0xd3, 0x30,
-	0x14, 0xc4, 0x69, 0xbb, 0xdb, 0xbc, 0xb6, 0xb0, 0x18, 0x4a, 0xa3, 0x02, 0x52, 0x64, 0x2d, 0x22,
-	0xea, 0x61, 0x03, 0xe5, 0x56, 0x2e, 0x2c, 0x2d, 0x88, 0x22, 0xad, 0x54, 0xb9, 0xd5, 0x8a, 0x23,
-	0x49, 0xd6, 0xda, 0x46, 0x74, 0xe3, 0x10, 0x27, 0x87, 0x72, 0xe4, 0xc0, 0x0f, 0xf0, 0x69, 0xfc,
-	0x02, 0x9f, 0xc0, 0x07, 0xa0, 0xbc, 0xd6, 0xa9, 0xbb, 0xa8, 0x12, 0x37, 0xcf, 0x78, 0x32, 0xcf,
-	0x33, 0xb6, 0x02, 0xf7, 0xc2, 0xf5, 0xb7, 0x20, 0xc9, 0xe3, 0x44, 0x9c, 0xa5, 0x99, 0xcc, 0x25,
-	0xb5, 0x2b, 0xa2, 0xff, 0xe4, 0x5a, 0xca, 0xeb, 0x95, 0xf0, 0x83, 0x34, 0xf6, 0x83, 0x24, 0x91,
-	0x79, 0x90, 0xc7, 0x32, 0x51, 0x1b, 0x21, 0xfb, 0x61, 0x41, 0x6b, 0x56, 0x84, 0xab, 0x38, 0x42,
-	0x9a, 0x3a, 0x70, 0x3c, 0x2b, 0xc2, 0xc5, 0x3a, 0x15, 0x0e, 0x71, 0x89, 0xd7, 0xe1, 0x1a, 0x52,
-	0x77, 0x2b, 0x54, 0x4b, 0x91, 0x4d, 0x27, 0x8e, 0xe5, 0x12, 0xaf, 0xce, 0x4d, 0x8a, 0x9e, 0x42,
-	0xc7, 0xb0, 0x9a, 0x4e, 0x9c, 0x9a, 0x4b, 0x3c, 0xca, 0xf7, 0xc9, 0x72, 0xc2, 0x42, 0xa6, 0x71,
-	0x34, 0x9d, 0x38, 0x75, 0xf4, 0xd0, 0x90, 0xf6, 0xa1, 0xf9, 0x36, 0x93, 0x5f, 0xd0, 0xbe, 0x81,
-	0x5b, 0x15, 0x2e, 0xf7, 0xc6, 0x32, 0xc9, 0x45, 0x92, 0x2b, 0xe7, 0xc8, 0xad, 0x79, 0x6d, 0x5e,
-	0x61, 0x7a, 0x02, 0xb5, 0x8b, 0xf3, 0xb1, 0x73, 0xec, 0x12, 0xaf, 0xcd, 0xcb, 0x25, 0x7d, 0x09,
-	0xf6, 0x78, 0x19, 0xc4, 0xc9, 0xc5, 0xf9, 0x58, 0x39, 0x4d, 0xb7, 0xe6, 0xb5, 0x86, 0x0f, 0xce,
-	0x76, 0x1d, 0xe9, 0x3d, 0xbe, 0x53, 0xb1, 0xe7, 0x18, 0x8f, 0x0b, 0x95, 0xca, 0x44, 0x89, 0xf2,
-	0x94, 0xf3, 0x22, 0x8a, 0x84, 0x52, 0xd8, 0x43, 0x93, 0x6b, 0xc8, 0x3e, 0x02, 0xcc, 0x4b, 0xe1,
-	0xd7, 0x42, 0xa8, 0xfc, 0x76, 0x2b, 0xe4, 0xdf, 0x56, 0xcc, 0x54, 0xd6, 0x7e, 0x2a, 0xf6, 0x06,
-	0x9a, 0xfa, 0x04, 0x94, 0x42, 0xfd, 0x7d, 0x26, 0x6f, 0xd0, 0xc2, 0xe6, 0xb8, 0xa6, 0x77, 0xc1,
-	0x5a, 0x48, 0xfc, 0xca, 0xe6, 0xd6, 0x42, 0xea, 0xa4, 0xb5, 0x2a, 0x29, 0x7b, 0x06, 0x1d, 0x74,
-	0xa8, 0x0e, 0xfe, 0x10, 0x1a, 0x97, 0xc1, 0x2a, 0xbe, 0xda, 0x1e, 0x7b, 0x03, 0xd8, 0x29, 0xb4,
-	0xdf, 0x45, 0x4b, 0x69, 0xaa, 0x3e, 0x88, 0xd5, 0x4a, 0x6a, 0x15, 0x82, 0xd2, 0x8c, 0x8b, 0xe0,
-	0x6a, 0x6d, 0xca, 0x90, 0xd0, 0x32, 0x04, 0x43, 0x01, 0xf6, 0xac, 0x08, 0x37, 0x21, 0xe8, 0x27,
-	0x7c, 0x30, 0x65, 0x5a, 0xfa, 0xc8, 0xa8, 0xd8, 0xb8, 0xf3, 0xfe, 0x2d, 0x5e, 0xbb, 0xb3, 0xa7,
-	0xdf, 0x7f, 0xfd, 0xfe, 0x69, 0xf5, 0x18, 0xf5, 0x53, 0xdd, 0x97, 0x5e, 0x8d, 0xc8, 0x60, 0x78,
-	0x03, 0xf6, 0xbc, 0x1a, 0xf3, 0x19, 0x81, 0x8a, 0xb2, 0x38, 0x14, 0xb4, 0x6b, 0x18, 0xee, 0xee,
-	0xa2, 0x7f, 0x60, 0x3e, 0x73, 0x71, 0x4e, 0x9f, 0x75, 0x7d, 0xa5, 0x2d, 0xb2, 0xdd, 0x72, 0x44,
-	0x06, 0x1e, 0x79, 0x41, 0x86, 0x7f, 0x08, 0xb4, 0xa6, 0x49, 0x2e, 0xb2, 0xed, 0xc4, 0x19, 0xd4,
-	0xcb, 0xca, 0x0e, 0xa6, 0xea, 0x19, 0xbc, 0xd9, 0x2d, 0xeb, 0xe1, 0xb8, 0xfb, 0xac, 0xed, 0x87,
-	0xe8, 0xe4, 0x8b, 0x68, 0x29, 0x47, 0x64, 0x40, 0x2f, 0xb7, 0x6d, 0x1e, 0xb4, 0x74, 0x0c, 0x7e,
-	0xef, 0x22, 0xd8, 0x63, 0xf4, 0xec, 0xb2, 0x13, 0xa3, 0xaa, 0xac, 0x54, 0x94, 0xbe, 0xaf, 0xa1,
-	0x81, 0x6f, 0xe0, 0xbf, 0x7c, 0xf7, 0x5e, 0x0b, 0xbb, 0x13, 0x1e, 0xe1, 0x7f, 0xe0, 0xd5, 0xdf,
-	0x00, 0x00, 0x00, 0xff, 0xff, 0xb3, 0x66, 0x24, 0x37, 0x43, 0x04, 0x00, 0x00,
+	// 661 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x54, 0xcd, 0x6e, 0xd3, 0x4c,
+	0x14, 0xfd, 0x9c, 0xb8, 0x69, 0x72, 0x9b, 0xf4, 0x83, 0xe9, 0x9f, 0x31, 0x08, 0xac, 0x51, 0x2b,
+	0xac, 0x2e, 0xea, 0x52, 0x76, 0x45, 0x42, 0x94, 0x04, 0x4a, 0x91, 0x2a, 0xa2, 0x69, 0xc4, 0x0e,
+	0x84, 0xed, 0x8c, 0x62, 0xab, 0xae, 0x27, 0x78, 0x6c, 0xa4, 0x50, 0xc1, 0x82, 0x05, 0x2f, 0xc0,
+	0xa3, 0xf1, 0x0a, 0xec, 0x78, 0x09, 0xe4, 0x89, 0xc7, 0x9e, 0x14, 0x5c, 0xd8, 0xcd, 0x39, 0xbe,
+	0x39, 0xe7, 0xde, 0x73, 0x67, 0x02, 0xff, 0x7b, 0xb3, 0x8f, 0x6e, 0x9c, 0x86, 0x31, 0xdd, 0x9b,
+	0x26, 0x2c, 0x65, 0xa8, 0x53, 0x12, 0xe6, 0x9d, 0x09, 0x63, 0x93, 0x88, 0x3a, 0xee, 0x34, 0x74,
+	0xdc, 0x38, 0x66, 0xa9, 0x9b, 0x86, 0x2c, 0xe6, 0xf3, 0x42, 0xfc, 0xb5, 0x01, 0x2b, 0xc3, 0xcc,
+	0x8b, 0x42, 0x5f, 0xd0, 0xc8, 0x80, 0xe5, 0x61, 0xe6, 0x8d, 0x66, 0x53, 0x6a, 0x68, 0x96, 0x66,
+	0xf7, 0x88, 0x84, 0xc8, 0x2a, 0x0a, 0x79, 0x40, 0x93, 0x93, 0x81, 0xd1, 0xb0, 0x34, 0x5b, 0x27,
+	0x2a, 0x85, 0xb6, 0xa1, 0xa7, 0x48, 0x9d, 0x0c, 0x8c, 0xa6, 0xa5, 0xd9, 0x88, 0x2c, 0x92, 0xb9,
+	0xc3, 0x88, 0x4d, 0x43, 0xff, 0x64, 0x60, 0xe8, 0x42, 0x43, 0x42, 0x64, 0x42, 0xfb, 0x69, 0xc2,
+	0xce, 0x85, 0xfc, 0x92, 0xf8, 0x54, 0xe2, 0xfc, 0x5b, 0x9f, 0xc5, 0x29, 0x8d, 0x53, 0x6e, 0xb4,
+	0xac, 0xa6, 0xdd, 0x25, 0x25, 0x46, 0x37, 0xa0, 0x79, 0x7a, 0xd4, 0x37, 0x96, 0x2d, 0xcd, 0xee,
+	0x92, 0xfc, 0x88, 0x1e, 0x40, 0xa7, 0x1f, 0xb8, 0x61, 0x7c, 0x7a, 0xd4, 0xe7, 0x46, 0xdb, 0x6a,
+	0xda, 0x2b, 0x07, 0x6b, 0x7b, 0x55, 0x46, 0xf2, 0x1b, 0xa9, 0xaa, 0xf0, 0x31, 0x74, 0xca, 0x59,
+	0xf2, 0x1e, 0x8f, 0xc6, 0xe3, 0x84, 0x72, 0x2e, 0x52, 0xe8, 0x10, 0x09, 0xff, 0x9e, 0x02, 0xfe,
+	0x0c, 0x70, 0x96, 0x79, 0xdc, 0x4f, 0x42, 0xef, 0x5a, 0xa5, 0x4d, 0x68, 0x0d, 0x19, 0x8b, 0x4a,
+	0x91, 0x02, 0xa1, 0xc7, 0x60, 0x0e, 0x28, 0x4f, 0xc3, 0x58, 0x04, 0x36, 0x08, 0xf3, 0xe3, 0x24,
+	0x0b, 0x79, 0x70, 0x41, 0xe3, 0x54, 0x44, 0xaa, 0x93, 0x6b, 0x2a, 0xf0, 0x7d, 0xd1, 0x21, 0xa1,
+	0x7c, 0xca, 0x62, 0x4e, 0xf3, 0x06, 0xce, 0x32, 0xdf, 0x97, 0x0d, 0xb4, 0x89, 0x84, 0xf8, 0xa5,
+	0x68, 0x94, 0xd0, 0xf7, 0x19, 0xe5, 0xe9, 0xd5, 0xc1, 0xb4, 0xdf, 0xd7, 0xab, 0xae, 0xa7, 0xb1,
+	0xb8, 0x1e, 0xfc, 0x04, 0xda, 0x32, 0x4a, 0x84, 0x40, 0x7f, 0x9e, 0xb0, 0x8b, 0x62, 0x5e, 0x71,
+	0x46, 0xab, 0xd0, 0x18, 0x31, 0xf1, 0xab, 0x0e, 0x69, 0x8c, 0x98, 0x5c, 0x59, 0xb3, 0x5c, 0x19,
+	0xde, 0x81, 0x9e, 0x50, 0x28, 0x1b, 0x5f, 0x87, 0xa5, 0xd7, 0x6e, 0x14, 0x8e, 0x8b, 0xb6, 0xe7,
+	0x00, 0x6f, 0x43, 0xf7, 0x99, 0x1f, 0x30, 0xb5, 0xea, 0x05, 0x8d, 0x22, 0x26, 0xab, 0x04, 0xc8,
+	0xc5, 0x08, 0x75, 0xc7, 0x33, 0xb5, 0x4c, 0x10, 0xb2, 0x4c, 0x80, 0x83, 0x73, 0xe8, 0x94, 0xab,
+	0x42, 0x6f, 0x55, 0xb0, 0xa1, 0xdc, 0x96, 0x2a, 0x24, 0xd3, 0x50, 0xe8, 0x05, 0x03, 0x6c, 0x7d,
+	0xf9, 0xfe, 0xe3, 0x5b, 0xc3, 0xc4, 0x1b, 0x0e, 0x2f, 0x97, 0x5f, 0x1d, 0x0f, 0xb5, 0xdd, 0x83,
+	0x9f, 0x3a, 0xb4, 0xe6, 0x79, 0xa1, 0x21, 0xe8, 0xf9, 0x10, 0x68, 0x53, 0x91, 0x53, 0x1e, 0x89,
+	0xb9, 0xa5, 0xf0, 0xea, 0xb4, 0x78, 0x4b, 0xb8, 0xdc, 0xc4, 0x5d, 0xc7, 0x13, 0x4a, 0x0e, 0xf5,
+	0x03, 0x76, 0xa8, 0xed, 0xa2, 0x37, 0xb0, 0x7a, 0x4c, 0xd3, 0xea, 0xde, 0xf1, 0xab, 0x13, 0x14,
+	0xbc, 0xf9, 0x67, 0x1a, 0xdf, 0x16, 0xc2, 0x1b, 0x68, 0x4d, 0x0a, 0x57, 0x53, 0xf0, 0x7d, 0x0d,
+	0x9d, 0x03, 0x22, 0x74, 0x12, 0xf2, 0x94, 0x26, 0xca, 0xdd, 0xae, 0xb1, 0xa8, 0x0f, 0x69, 0x5b,
+	0xb8, 0xdc, 0xc5, 0xb7, 0xa4, 0x4b, 0x52, 0x88, 0x3a, 0x97, 0xf3, 0xcb, 0xff, 0x29, 0x9f, 0xe5,
+	0xac, 0xd8, 0x55, 0x6d, 0x3c, 0xf5, 0x06, 0x86, 0x30, 0x40, 0xb8, 0x57, 0x19, 0xb8, 0xe3, 0x59,
+	0x2e, 0xfa, 0x0e, 0x96, 0x09, 0xf5, 0x69, 0xf8, 0x81, 0xd6, 0xca, 0x5e, 0xe1, 0x4b, 0xd1, 0x1d,
+	0x21, 0x7a, 0x0f, 0x9b, 0x52, 0x74, 0x9a, 0x45, 0x91, 0x73, 0xa9, 0x3c, 0x0d, 0xd1, 0xf6, 0x2b,
+	0xd0, 0x87, 0x19, 0x0f, 0xea, 0xae, 0x4e, 0x8d, 0x2b, 0x5e, 0x17, 0xea, 0xab, 0xa8, 0x5b, 0xa9,
+	0xf3, 0xc0, 0xd6, 0xf6, 0x35, 0xf4, 0x08, 0x96, 0xc4, 0x8b, 0xf8, 0xa7, 0x1c, 0x16, 0xde, 0x0e,
+	0xfe, 0xcf, 0x6b, 0x89, 0xbf, 0xf7, 0x87, 0xbf, 0x02, 0x00, 0x00, 0xff, 0xff, 0x0d, 0xe3, 0x53,
+	0xea, 0x1a, 0x06, 0x00, 0x00,
 }

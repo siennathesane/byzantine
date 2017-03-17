@@ -10,11 +10,13 @@ This is an implementation of the Byzantine Fault Tolerance algorithm as modelled
 
 To generate changes with `protoc`:
 
-```protoc -I/usr/local/include -I. \
+```shell
+protoc -I/usr/local/include -I. \
      -I$GOPATH/src \
      -I$GOPATH/src/github.com/googleapis/googleapis/ \
      -I$GOPATH/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
      --go_out=,plugins=grpc:. \
      --swagger_out=logtostderr=true:. \
      --grpc-gateway_out=logtostderr=true:. \
-     byzantine.proto```
+     byzantine.proto
+```
