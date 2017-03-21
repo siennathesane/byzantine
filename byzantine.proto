@@ -4,6 +4,8 @@ import "google/api/annotations.proto";
 
 package byzantine;
 
+/// TODO: Add leader election for brokers.
+
 /// Publication is the message sent out to the brokers, who pass it along to the subscribers.
 message Publication {
     uint32 PubType = 1;

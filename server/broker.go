@@ -35,12 +35,24 @@ func (bz *ByzantineBrokerServer) GetSubscribers(sub *byzantine.Subscriber, strea
 	}
 }
 
-func (ByzantineBrokerServer) RegisterSubscriber(context.Context, *byzantine.Subscriber) (*byzantine.ReadyResponse, error) {
-
-	panic("implement me")
+// RegisterSubscriber registers a new subscriber to the broker server.
+func (bz *ByzantineBrokerServer) RegisterSubscriber(ctx context.Context, sub *byzantine.Subscriber) (*byzantine.ReadyResponse, error) {
+	if _, ok := bz.subscribers[sub.PoolID]; !ok {
+		bz.logger.Printf("adding %s to the subscriber pool", sub.Address)
+		bz.subscribers[sub.PoolID] = sub
+		return &byzantine.ReadyResponse{Ready: true}, nil
+	} else {
+		bz.logger.Printf("%s:%d cannot be added to the subscriber pool because it already exists", sub.Address, sub.PoolID)
+		return &byzantine.ReadyResponse{Ready: false}, errors.New("cannot add subscriber")
+	}
 }
 
-func (ByzantineBrokerServer) Ready(context.Context, *byzantine.Publication) (*byzantine.ReadyResponse, error) {
+func (bz *ByzantineBrokerServer) Ready(context.Context, *byzantine.Publication) (*byzantine.ReadyResponse, error) {
+	/* TODO implement some ready logic. idk what that will look like yet.
+		this will most likely ping other broker servers to see if they are ready.
+		1. TODO: Validate the Subscriber thread is ready
+		2. TODO: Get positive ready responses from the other brokers.
+	*/
 	panic("implement me")
 }
 
