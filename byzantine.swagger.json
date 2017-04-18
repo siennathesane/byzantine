@@ -231,21 +231,6 @@
     }
   },
   "definitions": {
-    "byzantineChainMAC": {
-      "type": "object",
-      "properties": {
-        "From": {
-          "type": "string"
-        },
-        "To": {
-          "type": "string"
-        },
-        "MAC": {
-          "type": "string",
-          "format": "byte"
-        }
-      }
-    },
     "byzantineChainResponse": {
       "type": "object",
       "properties": {
@@ -276,17 +261,9 @@
     "byzantinePublication": {
       "type": "object",
       "properties": {
-        "PubType": {
-          "type": "integer",
-          "format": "int64"
-        },
         "PublisherID": {
           "type": "string",
           "format": "uint64"
-        },
-        "PublicationID": {
-          "type": "string",
-          "format": "int64"
         },
         "TopicID": {
           "type": "string",
@@ -302,19 +279,9 @@
             "type": "string",
             "format": "byte"
           }
-        },
-        "MAC": {
-          "type": "string",
-          "format": "byte"
-        },
-        "ChainMACs": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/byzantineChainMAC"
-          }
         }
       },
-      "description": "/ Publication is the message sent out to the brokers, who pass it along to the subscribers."
+      "description": "/ Publication is the message sent out to the broker."
     },
     "byzantineReadyResponse": {
       "type": "object",

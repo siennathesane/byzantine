@@ -4,16 +4,23 @@ import "google/api/annotations.proto";
 
 package byzantine;
 
-/// Publication is the message sent out to the brokers, who pass it along to the subscribers.
+/// Publication is the message sent out to the broker.
 message Publication {
-    uint32 PubType = 1;
-    uint64 PublisherID = 2;
-    sint64 PublicationID = 3;
-    uint64 TopicID = 4;
-    uint64 BrokerID = 5;
-    repeated bytes Contents = 6;
-    bytes MAC = 7;
-    repeated ChainMAC ChainMACs = 8;
+    uint64 PublisherID = 1;
+    uint64 BrokerID = 2;
+    repeated bytes Contents = 3;
+}
+
+/// PublicationIndex is the cache pointer of where data actually lives.
+message PublicationIndex {
+    string Index = 1;
+    repeated DataLocation Nodes = 2;
+}
+
+message DataLocation {
+    string Node = 1;
+    uint32 Start = 2;
+    uint32 Stop = 3;
 }
 
 /// Publisher defines a publisher within a quorum.
