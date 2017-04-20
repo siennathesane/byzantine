@@ -2,31 +2,87 @@ package server
 
 import (
 	"context"
-	"net/http"
+	"fmt"
+	"io"
+	"os"
 	"testing"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	"github.com/satori/go.uuid"
 	"github.com/streadway/amqp"
 )
 
 const (
-	RabbitVersion = 3
+	RabbitDockerImage = "rabbitmq:3"
 )
 
-func TestDockerAvailability(t *testing.T) {
-	httpClient := http.DefaultClient
-	docker, err := client.NewClient(client.DefaultDockerHost, "1.13", httpClient, nil)
+var (
+	isRabbitReady      = false
+	rabbitMaxHost      = 5
+	rabbitSecretCookie = "darkSide"
+	rabbitUser         = "bugsbunny"
+	rabbitPassword     = "wascalywabbit"
+	rabbitEnvVars      = []string{
+		"RABBITMQ_ERLANG_COOKIE=" + rabbitSecretCookie,
+		// go go gadget go faster.
+		"RABBITMQ_HIPE_COMPILE=0",
+		"RABBITMQ_DEFAULT_USER=" + rabbitUser,
+		"RABBITMQ_DEFAULT_PASS=" + rabbitPassword,
+	}
+)
+
+func TestMain(m *testing.M) {
+	// we need to be able to cancel it so we can kill the rabbit container later
+	// also, set up a deferred recovery so we can just kill the container if there
+	// is a panic. basically, CLEAN UP YOUR SHIT.
+	ctx, cancel := context.WithCancel(context.Background())
+
+	defer func() {
+		if r := recover(); r != nil {
+			cancel()
+		}
+	}()
+
+	defer ctx.Done()
+
+	dockerClient, err := client.NewEnvClient()
 	if err != nil {
-		t.Log(err)
-		t.Fail()
+		panic(err)
 	}
 
-	//docker.ContainerCreate(context.Background(), types.ContainerCreateConfig{})
+	fmt.Printf("setting up rabbitmq docker container for test with these vars: %v\n", rabbitEnvVars)
+	setupRabbitContainer(ctx, dockerClient)
+
+	os.Exit(m.Run())
 }
 
-func TestRabbitSend(t *testing.T) {
-	rabbitConn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+func setupRabbitContainer(ctx context.Context, cli *client.Client) {
+	output, err := cli.ImagePull(ctx, RabbitDockerImage, types.ImagePullOptions{})
+	if err != nil {
+		panic(err)
+	}
+	io.Copy(os.Stdout, output)
+
+	resp, err := cli.ContainerCreate(ctx,
+		&container.Config{
+			Image: RabbitDockerImage,
+			Env:   rabbitEnvVars,
+		}, &container.HostConfig{
+			NetworkMode: "host",
+		}, nil, "rabbit-test-"+uuid.NewV4().String())
+	if err != nil {
+		panic(err)
+	}
+
+	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
+		panic(err)
+	}
+}
+
+func TestBasicRabbitSend(t *testing.T) {
+	rabbitConn, err := NewRabbitClient(fmt.Sprintf("amqp://%s:%s@localhost:5672/", rabbitUser, rabbitPassword))
 	if err != nil {
 		t.Log(err)
 		t.Log("cannot connect to a local rabbit node!")
@@ -67,8 +123,8 @@ func TestRabbitSend(t *testing.T) {
 	)
 }
 
-func TestRabbitReceive(t *testing.T) {
-	rabbitConn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+func TestBasicRabbitReceive(t *testing.T) {
+	rabbitConn, err := NewRabbitClient(fmt.Sprintf("amqp://%s:%s@localhost:5672/", rabbitUser, rabbitPassword))
 	if err != nil {
 		t.Log(err)
 		t.Log("cannot connect to a local rabbit node!")
@@ -113,3 +169,4 @@ func TestRabbitReceive(t *testing.T) {
 	}
 	t.Fail()
 }
+

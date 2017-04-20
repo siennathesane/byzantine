@@ -15,11 +15,8 @@
 		Publisher
 		Subscriber
 		PubResponse
-		SubRequest
-		ChainMAC
-		ChainResponse
-		EchoResponse
-		ReadyResponse
+		NewClusterMember
+		EchoMessage
 */
 package byzantine
 
@@ -27,11 +24,6 @@ import proto "github.com/gogo/protobuf/proto"
 import fmt "fmt"
 import math "math"
 import _ "google.golang.org/genproto/googleapis/api/annotations"
-
-import (
-	context "golang.org/x/net/context"
-	grpc "google.golang.org/grpc"
-)
 
 import io "io"
 
@@ -48,10 +40,10 @@ const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
 // / Publication is the message sent out to the broker.
 type Publication struct {
-	PublisherID uint64   `protobuf:"varint,1,opt,name=PublisherID,proto3" json:"PublisherID,omitempty"`
-	TopicID     uint64   `protobuf:"varint,2,opt,name=TopicID,proto3" json:"TopicID,omitempty"`
-	BrokerID    uint64   `protobuf:"varint,3,opt,name=BrokerID,proto3" json:"BrokerID,omitempty"`
-	Contents    [][]byte `protobuf:"bytes,4,rep,name=Contents" json:"Contents,omitempty"`
+	PublicationID string     `protobuf:"bytes,1,opt,name=PublicationID,proto3" json:"PublicationID,omitempty"`
+	BrokerID      string     `protobuf:"bytes,2,opt,name=BrokerID,proto3" json:"BrokerID,omitempty"`
+	Contents      []byte     `protobuf:"bytes,3,opt,name=Contents,proto3" json:"Contents,omitempty"`
+	Sender        *Publisher `protobuf:"bytes,4,opt,name=Sender" json:"Sender,omitempty"`
 }
 
 func (m *Publication) Reset()                    { *m = Publication{} }
@@ -59,30 +51,30 @@ func (m *Publication) String() string            { return proto.CompactTextStrin
 func (*Publication) ProtoMessage()               {}
 func (*Publication) Descriptor() ([]byte, []int) { return fileDescriptorByzantine, []int{0} }
 
-func (m *Publication) GetPublisherID() uint64 {
+func (m *Publication) GetPublicationID() string {
 	if m != nil {
-		return m.PublisherID
+		return m.PublicationID
 	}
-	return 0
+	return ""
 }
 
-func (m *Publication) GetTopicID() uint64 {
-	if m != nil {
-		return m.TopicID
-	}
-	return 0
-}
-
-func (m *Publication) GetBrokerID() uint64 {
+func (m *Publication) GetBrokerID() string {
 	if m != nil {
 		return m.BrokerID
 	}
-	return 0
+	return ""
 }
 
-func (m *Publication) GetContents() [][]byte {
+func (m *Publication) GetContents() []byte {
 	if m != nil {
 		return m.Contents
+	}
+	return nil
+}
+
+func (m *Publication) GetSender() *Publisher {
+	if m != nil {
+		return m.Sender
 	}
 	return nil
 }
@@ -114,8 +106,8 @@ func (m *PublicationIndex) GetNodes() []*DataLocation {
 
 type DataLocation struct {
 	Node  string `protobuf:"bytes,1,opt,name=Node,proto3" json:"Node,omitempty"`
-	Start uint32 `protobuf:"varint,2,opt,name=Start,proto3" json:"Start,omitempty"`
-	Stop  uint32 `protobuf:"varint,3,opt,name=Stop,proto3" json:"Stop,omitempty"`
+	Start uint64 `protobuf:"varint,2,opt,name=Start,proto3" json:"Start,omitempty"`
+	Stop  uint64 `protobuf:"varint,3,opt,name=Stop,proto3" json:"Stop,omitempty"`
 }
 
 func (m *DataLocation) Reset()                    { *m = DataLocation{} }
@@ -130,14 +122,14 @@ func (m *DataLocation) GetNode() string {
 	return ""
 }
 
-func (m *DataLocation) GetStart() uint32 {
+func (m *DataLocation) GetStart() uint64 {
 	if m != nil {
 		return m.Start
 	}
 	return 0
 }
 
-func (m *DataLocation) GetStop() uint32 {
+func (m *DataLocation) GetStop() uint64 {
 	if m != nil {
 		return m.Stop
 	}
@@ -147,7 +139,7 @@ func (m *DataLocation) GetStop() uint32 {
 // / Publisher defines a publisher within a quorum.
 type Publisher struct {
 	Address     string `protobuf:"bytes,1,opt,name=Address,proto3" json:"Address,omitempty"`
-	PublisherID uint64 `protobuf:"varint,2,opt,name=PublisherID,proto3" json:"PublisherID,omitempty"`
+	PublisherID string `protobuf:"bytes,2,opt,name=PublisherID,proto3" json:"PublisherID,omitempty"`
 }
 
 func (m *Publisher) Reset()                    { *m = Publisher{} }
@@ -162,11 +154,11 @@ func (m *Publisher) GetAddress() string {
 	return ""
 }
 
-func (m *Publisher) GetPublisherID() uint64 {
+func (m *Publisher) GetPublisherID() string {
 	if m != nil {
 		return m.PublisherID
 	}
-	return 0
+	return ""
 }
 
 // / Subscriber defines a subscriber within a subscriber pool.
@@ -202,6 +194,7 @@ func (m *Subscriber) GetDestinationDistinguishment() uint64 {
 	return 0
 }
 
+// / PubResponse returns whether or not the data was actually stored.
 type PubResponse struct {
 	Success bool `protobuf:"varint,1,opt,name=Success,proto3" json:"Success,omitempty"`
 }
@@ -218,108 +211,54 @@ func (m *PubResponse) GetSuccess() bool {
 	return false
 }
 
-type SubRequest struct {
+// / NewClusterMember is how new Pub/Subs join the pool
+type NewClusterMember struct {
 	PublisherID uint64 `protobuf:"varint,1,opt,name=PublisherID,proto3" json:"PublisherID,omitempty"`
 	BrokerID    uint64 `protobuf:"varint,2,opt,name=BrokerID,proto3" json:"BrokerID,omitempty"`
 }
 
-func (m *SubRequest) Reset()                    { *m = SubRequest{} }
-func (m *SubRequest) String() string            { return proto.CompactTextString(m) }
-func (*SubRequest) ProtoMessage()               {}
-func (*SubRequest) Descriptor() ([]byte, []int) { return fileDescriptorByzantine, []int{6} }
+func (m *NewClusterMember) Reset()                    { *m = NewClusterMember{} }
+func (m *NewClusterMember) String() string            { return proto.CompactTextString(m) }
+func (*NewClusterMember) ProtoMessage()               {}
+func (*NewClusterMember) Descriptor() ([]byte, []int) { return fileDescriptorByzantine, []int{6} }
 
-func (m *SubRequest) GetPublisherID() uint64 {
+func (m *NewClusterMember) GetPublisherID() uint64 {
 	if m != nil {
 		return m.PublisherID
 	}
 	return 0
 }
 
-func (m *SubRequest) GetBrokerID() uint64 {
+func (m *NewClusterMember) GetBrokerID() uint64 {
 	if m != nil {
 		return m.BrokerID
 	}
 	return 0
 }
 
-type ChainMAC struct {
-	From string `protobuf:"bytes,1,opt,name=From,proto3" json:"From,omitempty"`
-	To   string `protobuf:"bytes,2,opt,name=To,proto3" json:"To,omitempty"`
-	MAC  []byte `protobuf:"bytes,3,opt,name=MAC,proto3" json:"MAC,omitempty"`
+// / Heartbeat is how we determine who is alive and who isn't.
+type EchoMessage struct {
+	Hello        bool   `protobuf:"varint,1,opt,name=Hello,proto3" json:"Hello,omitempty"`
+	MessageIdent string `protobuf:"bytes,2,opt,name=MessageIdent,proto3" json:"MessageIdent,omitempty"`
 }
 
-func (m *ChainMAC) Reset()                    { *m = ChainMAC{} }
-func (m *ChainMAC) String() string            { return proto.CompactTextString(m) }
-func (*ChainMAC) ProtoMessage()               {}
-func (*ChainMAC) Descriptor() ([]byte, []int) { return fileDescriptorByzantine, []int{7} }
+func (m *EchoMessage) Reset()                    { *m = EchoMessage{} }
+func (m *EchoMessage) String() string            { return proto.CompactTextString(m) }
+func (*EchoMessage) ProtoMessage()               {}
+func (*EchoMessage) Descriptor() ([]byte, []int) { return fileDescriptorByzantine, []int{7} }
 
-func (m *ChainMAC) GetFrom() string {
-	if m != nil {
-		return m.From
-	}
-	return ""
-}
-
-func (m *ChainMAC) GetTo() string {
-	if m != nil {
-		return m.To
-	}
-	return ""
-}
-
-func (m *ChainMAC) GetMAC() []byte {
-	if m != nil {
-		return m.MAC
-	}
-	return nil
-}
-
-type ChainResponse struct {
-	Valid bool `protobuf:"varint,1,opt,name=Valid,proto3" json:"Valid,omitempty"`
-}
-
-func (m *ChainResponse) Reset()                    { *m = ChainResponse{} }
-func (m *ChainResponse) String() string            { return proto.CompactTextString(m) }
-func (*ChainResponse) ProtoMessage()               {}
-func (*ChainResponse) Descriptor() ([]byte, []int) { return fileDescriptorByzantine, []int{8} }
-
-func (m *ChainResponse) GetValid() bool {
-	if m != nil {
-		return m.Valid
-	}
-	return false
-}
-
-type EchoResponse struct {
-	Hello bool `protobuf:"varint,1,opt,name=Hello,proto3" json:"Hello,omitempty"`
-}
-
-func (m *EchoResponse) Reset()                    { *m = EchoResponse{} }
-func (m *EchoResponse) String() string            { return proto.CompactTextString(m) }
-func (*EchoResponse) ProtoMessage()               {}
-func (*EchoResponse) Descriptor() ([]byte, []int) { return fileDescriptorByzantine, []int{9} }
-
-func (m *EchoResponse) GetHello() bool {
+func (m *EchoMessage) GetHello() bool {
 	if m != nil {
 		return m.Hello
 	}
 	return false
 }
 
-type ReadyResponse struct {
-	Ready bool `protobuf:"varint,1,opt,name=Ready,proto3" json:"Ready,omitempty"`
-}
-
-func (m *ReadyResponse) Reset()                    { *m = ReadyResponse{} }
-func (m *ReadyResponse) String() string            { return proto.CompactTextString(m) }
-func (*ReadyResponse) ProtoMessage()               {}
-func (*ReadyResponse) Descriptor() ([]byte, []int) { return fileDescriptorByzantine, []int{10} }
-
-func (m *ReadyResponse) GetReady() bool {
+func (m *EchoMessage) GetMessageIdent() string {
 	if m != nil {
-		return m.Ready
+		return m.MessageIdent
 	}
-	return false
+	return ""
 }
 
 func init() {
@@ -329,407 +268,9 @@ func init() {
 	proto.RegisterType((*Publisher)(nil), "byzantine.Publisher")
 	proto.RegisterType((*Subscriber)(nil), "byzantine.Subscriber")
 	proto.RegisterType((*PubResponse)(nil), "byzantine.PubResponse")
-	proto.RegisterType((*SubRequest)(nil), "byzantine.SubRequest")
-	proto.RegisterType((*ChainMAC)(nil), "byzantine.ChainMAC")
-	proto.RegisterType((*ChainResponse)(nil), "byzantine.ChainResponse")
-	proto.RegisterType((*EchoResponse)(nil), "byzantine.EchoResponse")
-	proto.RegisterType((*ReadyResponse)(nil), "byzantine.ReadyResponse")
+	proto.RegisterType((*NewClusterMember)(nil), "byzantine.NewClusterMember")
+	proto.RegisterType((*EchoMessage)(nil), "byzantine.EchoMessage")
 }
-
-// Reference imports to suppress errors if they are not otherwise used.
-var _ context.Context
-var _ grpc.ClientConn
-
-// This is a compile-time assertion to ensure that this generated file
-// is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion4
-
-// Client API for Subscribe service
-
-type SubscribeClient interface {
-	Subscribe(ctx context.Context, in *SubRequest, opts ...grpc.CallOption) (*ReadyResponse, error)
-}
-
-type subscribeClient struct {
-	cc *grpc.ClientConn
-}
-
-func NewSubscribeClient(cc *grpc.ClientConn) SubscribeClient {
-	return &subscribeClient{cc}
-}
-
-func (c *subscribeClient) Subscribe(ctx context.Context, in *SubRequest, opts ...grpc.CallOption) (*ReadyResponse, error) {
-	out := new(ReadyResponse)
-	err := grpc.Invoke(ctx, "/byzantine.Subscribe/Subscribe", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// Server API for Subscribe service
-
-type SubscribeServer interface {
-	Subscribe(context.Context, *SubRequest) (*ReadyResponse, error)
-}
-
-func RegisterSubscribeServer(s *grpc.Server, srv SubscribeServer) {
-	s.RegisterService(&_Subscribe_serviceDesc, srv)
-}
-
-func _Subscribe_Subscribe_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SubRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SubscribeServer).Subscribe(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/byzantine.Subscribe/Subscribe",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SubscribeServer).Subscribe(ctx, req.(*SubRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-var _Subscribe_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "byzantine.Subscribe",
-	HandlerType: (*SubscribeServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "Subscribe",
-			Handler:    _Subscribe_Subscribe_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "byzantine.proto",
-}
-
-// Client API for Broker service
-
-type BrokerClient interface {
-	Echo(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*EchoResponse, error)
-	GetSubscribers(ctx context.Context, in *Subscriber, opts ...grpc.CallOption) (Broker_GetSubscribersClient, error)
-	RegisterSubscriber(ctx context.Context, in *Subscriber, opts ...grpc.CallOption) (*ReadyResponse, error)
-	Ready(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*ReadyResponse, error)
-	Receive(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*PubResponse, error)
-	Push(ctx context.Context, opts ...grpc.CallOption) (Broker_PushClient, error)
-	Chain(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*ChainResponse, error)
-}
-
-type brokerClient struct {
-	cc *grpc.ClientConn
-}
-
-func NewBrokerClient(cc *grpc.ClientConn) BrokerClient {
-	return &brokerClient{cc}
-}
-
-func (c *brokerClient) Echo(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*EchoResponse, error) {
-	out := new(EchoResponse)
-	err := grpc.Invoke(ctx, "/byzantine.Broker/Echo", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *brokerClient) GetSubscribers(ctx context.Context, in *Subscriber, opts ...grpc.CallOption) (Broker_GetSubscribersClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_Broker_serviceDesc.Streams[0], c.cc, "/byzantine.Broker/GetSubscribers", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &brokerGetSubscribersClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-type Broker_GetSubscribersClient interface {
-	Recv() (*Subscriber, error)
-	grpc.ClientStream
-}
-
-type brokerGetSubscribersClient struct {
-	grpc.ClientStream
-}
-
-func (x *brokerGetSubscribersClient) Recv() (*Subscriber, error) {
-	m := new(Subscriber)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-func (c *brokerClient) RegisterSubscriber(ctx context.Context, in *Subscriber, opts ...grpc.CallOption) (*ReadyResponse, error) {
-	out := new(ReadyResponse)
-	err := grpc.Invoke(ctx, "/byzantine.Broker/RegisterSubscriber", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *brokerClient) Ready(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*ReadyResponse, error) {
-	out := new(ReadyResponse)
-	err := grpc.Invoke(ctx, "/byzantine.Broker/Ready", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *brokerClient) Receive(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*PubResponse, error) {
-	out := new(PubResponse)
-	err := grpc.Invoke(ctx, "/byzantine.Broker/Receive", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *brokerClient) Push(ctx context.Context, opts ...grpc.CallOption) (Broker_PushClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_Broker_serviceDesc.Streams[1], c.cc, "/byzantine.Broker/Push", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &brokerPushClient{stream}
-	return x, nil
-}
-
-type Broker_PushClient interface {
-	Send(*SubRequest) error
-	Recv() (*Publication, error)
-	grpc.ClientStream
-}
-
-type brokerPushClient struct {
-	grpc.ClientStream
-}
-
-func (x *brokerPushClient) Send(m *SubRequest) error {
-	return x.ClientStream.SendMsg(m)
-}
-
-func (x *brokerPushClient) Recv() (*Publication, error) {
-	m := new(Publication)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-func (c *brokerClient) Chain(ctx context.Context, in *Publication, opts ...grpc.CallOption) (*ChainResponse, error) {
-	out := new(ChainResponse)
-	err := grpc.Invoke(ctx, "/byzantine.Broker/Chain", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// Server API for Broker service
-
-type BrokerServer interface {
-	Echo(context.Context, *Publication) (*EchoResponse, error)
-	GetSubscribers(*Subscriber, Broker_GetSubscribersServer) error
-	RegisterSubscriber(context.Context, *Subscriber) (*ReadyResponse, error)
-	Ready(context.Context, *Publication) (*ReadyResponse, error)
-	Receive(context.Context, *Publication) (*PubResponse, error)
-	Push(Broker_PushServer) error
-	Chain(context.Context, *Publication) (*ChainResponse, error)
-}
-
-func RegisterBrokerServer(s *grpc.Server, srv BrokerServer) {
-	s.RegisterService(&_Broker_serviceDesc, srv)
-}
-
-func _Broker_Echo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Publication)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BrokerServer).Echo(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/byzantine.Broker/Echo",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BrokerServer).Echo(ctx, req.(*Publication))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Broker_GetSubscribers_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(Subscriber)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(BrokerServer).GetSubscribers(m, &brokerGetSubscribersServer{stream})
-}
-
-type Broker_GetSubscribersServer interface {
-	Send(*Subscriber) error
-	grpc.ServerStream
-}
-
-type brokerGetSubscribersServer struct {
-	grpc.ServerStream
-}
-
-func (x *brokerGetSubscribersServer) Send(m *Subscriber) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func _Broker_RegisterSubscriber_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Subscriber)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BrokerServer).RegisterSubscriber(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/byzantine.Broker/RegisterSubscriber",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BrokerServer).RegisterSubscriber(ctx, req.(*Subscriber))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Broker_Ready_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Publication)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BrokerServer).Ready(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/byzantine.Broker/Ready",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BrokerServer).Ready(ctx, req.(*Publication))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Broker_Receive_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Publication)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BrokerServer).Receive(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/byzantine.Broker/Receive",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BrokerServer).Receive(ctx, req.(*Publication))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Broker_Push_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(BrokerServer).Push(&brokerPushServer{stream})
-}
-
-type Broker_PushServer interface {
-	Send(*Publication) error
-	Recv() (*SubRequest, error)
-	grpc.ServerStream
-}
-
-type brokerPushServer struct {
-	grpc.ServerStream
-}
-
-func (x *brokerPushServer) Send(m *Publication) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func (x *brokerPushServer) Recv() (*SubRequest, error) {
-	m := new(SubRequest)
-	if err := x.ServerStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-func _Broker_Chain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Publication)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BrokerServer).Chain(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/byzantine.Broker/Chain",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BrokerServer).Chain(ctx, req.(*Publication))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-var _Broker_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "byzantine.Broker",
-	HandlerType: (*BrokerServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "Echo",
-			Handler:    _Broker_Echo_Handler,
-		},
-		{
-			MethodName: "RegisterSubscriber",
-			Handler:    _Broker_RegisterSubscriber_Handler,
-		},
-		{
-			MethodName: "Ready",
-			Handler:    _Broker_Ready_Handler,
-		},
-		{
-			MethodName: "Receive",
-			Handler:    _Broker_Receive_Handler,
-		},
-		{
-			MethodName: "Chain",
-			Handler:    _Broker_Chain_Handler,
-		},
-	},
-	Streams: []grpc.StreamDesc{
-		{
-			StreamName:    "GetSubscribers",
-			Handler:       _Broker_GetSubscribers_Handler,
-			ServerStreams: true,
-		},
-		{
-			StreamName:    "Push",
-			Handler:       _Broker_Push_Handler,
-			ServerStreams: true,
-			ClientStreams: true,
-		},
-	},
-	Metadata: "byzantine.proto",
-}
-
 func (m *Publication) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -745,28 +286,33 @@ func (m *Publication) MarshalTo(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if m.PublisherID != 0 {
-		dAtA[i] = 0x8
+	if len(m.PublicationID) > 0 {
+		dAtA[i] = 0xa
 		i++
-		i = encodeVarintByzantine(dAtA, i, uint64(m.PublisherID))
+		i = encodeVarintByzantine(dAtA, i, uint64(len(m.PublicationID)))
+		i += copy(dAtA[i:], m.PublicationID)
 	}
-	if m.TopicID != 0 {
-		dAtA[i] = 0x10
+	if len(m.BrokerID) > 0 {
+		dAtA[i] = 0x12
 		i++
-		i = encodeVarintByzantine(dAtA, i, uint64(m.TopicID))
-	}
-	if m.BrokerID != 0 {
-		dAtA[i] = 0x18
-		i++
-		i = encodeVarintByzantine(dAtA, i, uint64(m.BrokerID))
+		i = encodeVarintByzantine(dAtA, i, uint64(len(m.BrokerID)))
+		i += copy(dAtA[i:], m.BrokerID)
 	}
 	if len(m.Contents) > 0 {
-		for _, b := range m.Contents {
-			dAtA[i] = 0x22
-			i++
-			i = encodeVarintByzantine(dAtA, i, uint64(len(b)))
-			i += copy(dAtA[i:], b)
+		dAtA[i] = 0x1a
+		i++
+		i = encodeVarintByzantine(dAtA, i, uint64(len(m.Contents)))
+		i += copy(dAtA[i:], m.Contents)
+	}
+	if m.Sender != nil {
+		dAtA[i] = 0x22
+		i++
+		i = encodeVarintByzantine(dAtA, i, uint64(m.Sender.Size()))
+		n1, err := m.Sender.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
+		i += n1
 	}
 	return i, nil
 }
@@ -862,10 +408,11 @@ func (m *Publisher) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintByzantine(dAtA, i, uint64(len(m.Address)))
 		i += copy(dAtA[i:], m.Address)
 	}
-	if m.PublisherID != 0 {
-		dAtA[i] = 0x10
+	if len(m.PublisherID) > 0 {
+		dAtA[i] = 0x12
 		i++
-		i = encodeVarintByzantine(dAtA, i, uint64(m.PublisherID))
+		i = encodeVarintByzantine(dAtA, i, uint64(len(m.PublisherID)))
+		i += copy(dAtA[i:], m.PublisherID)
 	}
 	return i, nil
 }
@@ -932,7 +479,7 @@ func (m *PubResponse) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *SubRequest) Marshal() (dAtA []byte, err error) {
+func (m *NewClusterMember) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -942,7 +489,7 @@ func (m *SubRequest) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *SubRequest) MarshalTo(dAtA []byte) (int, error) {
+func (m *NewClusterMember) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -960,7 +507,7 @@ func (m *SubRequest) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *ChainMAC) Marshal() (dAtA []byte, err error) {
+func (m *EchoMessage) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -970,71 +517,7 @@ func (m *ChainMAC) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ChainMAC) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	if len(m.From) > 0 {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintByzantine(dAtA, i, uint64(len(m.From)))
-		i += copy(dAtA[i:], m.From)
-	}
-	if len(m.To) > 0 {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintByzantine(dAtA, i, uint64(len(m.To)))
-		i += copy(dAtA[i:], m.To)
-	}
-	if len(m.MAC) > 0 {
-		dAtA[i] = 0x1a
-		i++
-		i = encodeVarintByzantine(dAtA, i, uint64(len(m.MAC)))
-		i += copy(dAtA[i:], m.MAC)
-	}
-	return i, nil
-}
-
-func (m *ChainResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ChainResponse) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	if m.Valid {
-		dAtA[i] = 0x8
-		i++
-		if m.Valid {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i++
-	}
-	return i, nil
-}
-
-func (m *EchoResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *EchoResponse) MarshalTo(dAtA []byte) (int, error) {
+func (m *EchoMessage) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -1049,33 +532,11 @@ func (m *EchoResponse) MarshalTo(dAtA []byte) (int, error) {
 		}
 		i++
 	}
-	return i, nil
-}
-
-func (m *ReadyResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ReadyResponse) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	if m.Ready {
-		dAtA[i] = 0x8
+	if len(m.MessageIdent) > 0 {
+		dAtA[i] = 0x12
 		i++
-		if m.Ready {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i++
+		i = encodeVarintByzantine(dAtA, i, uint64(len(m.MessageIdent)))
+		i += copy(dAtA[i:], m.MessageIdent)
 	}
 	return i, nil
 }
@@ -1110,20 +571,21 @@ func encodeVarintByzantine(dAtA []byte, offset int, v uint64) int {
 func (m *Publication) Size() (n int) {
 	var l int
 	_ = l
-	if m.PublisherID != 0 {
-		n += 1 + sovByzantine(uint64(m.PublisherID))
+	l = len(m.PublicationID)
+	if l > 0 {
+		n += 1 + l + sovByzantine(uint64(l))
 	}
-	if m.TopicID != 0 {
-		n += 1 + sovByzantine(uint64(m.TopicID))
+	l = len(m.BrokerID)
+	if l > 0 {
+		n += 1 + l + sovByzantine(uint64(l))
 	}
-	if m.BrokerID != 0 {
-		n += 1 + sovByzantine(uint64(m.BrokerID))
+	l = len(m.Contents)
+	if l > 0 {
+		n += 1 + l + sovByzantine(uint64(l))
 	}
-	if len(m.Contents) > 0 {
-		for _, b := range m.Contents {
-			l = len(b)
-			n += 1 + l + sovByzantine(uint64(l))
-		}
+	if m.Sender != nil {
+		l = m.Sender.Size()
+		n += 1 + l + sovByzantine(uint64(l))
 	}
 	return n
 }
@@ -1167,8 +629,9 @@ func (m *Publisher) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovByzantine(uint64(l))
 	}
-	if m.PublisherID != 0 {
-		n += 1 + sovByzantine(uint64(m.PublisherID))
+	l = len(m.PublisherID)
+	if l > 0 {
+		n += 1 + l + sovByzantine(uint64(l))
 	}
 	return n
 }
@@ -1198,7 +661,7 @@ func (m *PubResponse) Size() (n int) {
 	return n
 }
 
-func (m *SubRequest) Size() (n int) {
+func (m *NewClusterMember) Size() (n int) {
 	var l int
 	_ = l
 	if m.PublisherID != 0 {
@@ -1210,47 +673,15 @@ func (m *SubRequest) Size() (n int) {
 	return n
 }
 
-func (m *ChainMAC) Size() (n int) {
-	var l int
-	_ = l
-	l = len(m.From)
-	if l > 0 {
-		n += 1 + l + sovByzantine(uint64(l))
-	}
-	l = len(m.To)
-	if l > 0 {
-		n += 1 + l + sovByzantine(uint64(l))
-	}
-	l = len(m.MAC)
-	if l > 0 {
-		n += 1 + l + sovByzantine(uint64(l))
-	}
-	return n
-}
-
-func (m *ChainResponse) Size() (n int) {
-	var l int
-	_ = l
-	if m.Valid {
-		n += 2
-	}
-	return n
-}
-
-func (m *EchoResponse) Size() (n int) {
+func (m *EchoMessage) Size() (n int) {
 	var l int
 	_ = l
 	if m.Hello {
 		n += 2
 	}
-	return n
-}
-
-func (m *ReadyResponse) Size() (n int) {
-	var l int
-	_ = l
-	if m.Ready {
-		n += 2
+	l = len(m.MessageIdent)
+	if l > 0 {
+		n += 1 + l + sovByzantine(uint64(l))
 	}
 	return n
 }
@@ -1298,10 +729,10 @@ func (m *Publication) Unmarshal(dAtA []byte) error {
 		}
 		switch fieldNum {
 		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PublisherID", wireType)
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PublicationID", wireType)
 			}
-			m.PublisherID = 0
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowByzantine
@@ -1311,35 +742,26 @@ func (m *Publication) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.PublisherID |= (uint64(b) & 0x7F) << shift
+				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthByzantine
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.PublicationID = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field TopicID", wireType)
-			}
-			m.TopicID = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowByzantine
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.TopicID |= (uint64(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 3:
-			if wireType != 0 {
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field BrokerID", wireType)
 			}
-			m.BrokerID = 0
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowByzantine
@@ -1349,12 +771,22 @@ func (m *Publication) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.BrokerID |= (uint64(b) & 0x7F) << shift
+				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-		case 4:
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthByzantine
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.BrokerID = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Contents", wireType)
 			}
@@ -1380,8 +812,43 @@ func (m *Publication) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Contents = append(m.Contents, make([]byte, postIndex-iNdEx))
-			copy(m.Contents[len(m.Contents)-1], dAtA[iNdEx:postIndex])
+			m.Contents = append(m.Contents[:0], dAtA[iNdEx:postIndex]...)
+			if m.Contents == nil {
+				m.Contents = []byte{}
+			}
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Sender", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowByzantine
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthByzantine
+			}
+			postIndex := iNdEx + msglen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Sender == nil {
+				m.Sender = &Publisher{}
+			}
+			if err := m.Sender.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -1586,7 +1053,7 @@ func (m *DataLocation) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Start |= (uint32(b) & 0x7F) << shift
+				m.Start |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -1605,7 +1072,7 @@ func (m *DataLocation) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Stop |= (uint32(b) & 0x7F) << shift
+				m.Stop |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -1690,10 +1157,10 @@ func (m *Publisher) Unmarshal(dAtA []byte) error {
 			m.Address = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
-			if wireType != 0 {
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field PublisherID", wireType)
 			}
-			m.PublisherID = 0
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowByzantine
@@ -1703,11 +1170,21 @@ func (m *Publisher) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.PublisherID |= (uint64(b) & 0x7F) << shift
+				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthByzantine
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.PublisherID = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipByzantine(dAtA[iNdEx:])
@@ -1916,7 +1393,7 @@ func (m *PubResponse) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *SubRequest) Unmarshal(dAtA []byte) error {
+func (m *NewClusterMember) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1939,10 +1416,10 @@ func (m *SubRequest) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: SubRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: NewClusterMember: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: SubRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: NewClusterMember: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -2004,7 +1481,7 @@ func (m *SubRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ChainMAC) Unmarshal(dAtA []byte) error {
+func (m *EchoMessage) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2027,219 +1504,10 @@ func (m *ChainMAC) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ChainMAC: wiretype end group for non-group")
+			return fmt.Errorf("proto: EchoMessage: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ChainMAC: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field From", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowByzantine
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= (uint64(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthByzantine
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.From = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field To", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowByzantine
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= (uint64(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthByzantine
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.To = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field MAC", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowByzantine
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= (int(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthByzantine
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.MAC = append(m.MAC[:0], dAtA[iNdEx:postIndex]...)
-			if m.MAC == nil {
-				m.MAC = []byte{}
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipByzantine(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthByzantine
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ChainResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowByzantine
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ChainResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ChainResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Valid", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowByzantine
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= (int(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.Valid = bool(v != 0)
-		default:
-			iNdEx = preIndex
-			skippy, err := skipByzantine(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthByzantine
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *EchoResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowByzantine
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: EchoResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: EchoResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: EchoMessage: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -2262,61 +1530,11 @@ func (m *EchoResponse) Unmarshal(dAtA []byte) error {
 				}
 			}
 			m.Hello = bool(v != 0)
-		default:
-			iNdEx = preIndex
-			skippy, err := skipByzantine(dAtA[iNdEx:])
-			if err != nil {
-				return err
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field MessageIdent", wireType)
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthByzantine
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ReadyResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowByzantine
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ReadyResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ReadyResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Ready", wireType)
-			}
-			var v int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowByzantine
@@ -2326,12 +1544,21 @@ func (m *ReadyResponse) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				v |= (int(b) & 0x7F) << shift
+				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			m.Ready = bool(v != 0)
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthByzantine
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.MessageIdent = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipByzantine(dAtA[iNdEx:])
@@ -2461,49 +1688,33 @@ var (
 func init() { proto.RegisterFile("byzantine.proto", fileDescriptorByzantine) }
 
 var fileDescriptorByzantine = []byte{
-	// 702 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x55, 0xdd, 0x4e, 0x13, 0x41,
-	0x14, 0x66, 0xfb, 0x03, 0xf4, 0xd0, 0x22, 0x8e, 0xfc, 0xd4, 0xd5, 0xd4, 0x66, 0x02, 0xb1, 0x21,
-	0x91, 0x12, 0xbc, 0xc3, 0xc4, 0x08, 0xad, 0x22, 0x06, 0xb4, 0x99, 0x12, 0xbd, 0xd2, 0xb8, 0xdd,
-	0x4e, 0xda, 0x0d, 0xcb, 0x4e, 0xdd, 0x99, 0x1a, 0x91, 0x68, 0xa2, 0x4f, 0x60, 0xe2, 0x4b, 0x79,
-	0x69, 0xe2, 0x0b, 0x18, 0xf4, 0xce, 0x97, 0x30, 0x73, 0xf6, 0xa7, 0x03, 0x5a, 0xc2, 0xdd, 0xf9,
-	0xce, 0x9c, 0xfd, 0xce, 0xf9, 0xbe, 0x39, 0x93, 0x85, 0x2b, 0x9d, 0xe3, 0xf7, 0x4e, 0xa0, 0xbc,
-	0x80, 0xaf, 0x0d, 0x42, 0xa1, 0x04, 0x29, 0xa4, 0x09, 0xfb, 0x66, 0x4f, 0x88, 0x9e, 0xcf, 0xeb,
-	0xce, 0xc0, 0xab, 0x3b, 0x41, 0x20, 0x94, 0xa3, 0x3c, 0x11, 0xc8, 0xa8, 0x90, 0x7e, 0xb2, 0x60,
-	0xa6, 0x35, 0xec, 0xf8, 0x9e, 0x8b, 0x69, 0x52, 0x8d, 0xa1, 0xec, 0xf3, 0x70, 0xb7, 0x59, 0xb6,
-	0xaa, 0x56, 0x2d, 0xc7, 0xcc, 0x14, 0x29, 0xc3, 0xd4, 0x81, 0x18, 0x78, 0xee, 0x6e, 0xb3, 0x9c,
-	0xc1, 0xd3, 0x04, 0x12, 0x1b, 0xa6, 0xb7, 0x43, 0x71, 0x88, 0x1f, 0x66, 0xf1, 0x28, 0xc5, 0xfa,
-	0xac, 0x21, 0x02, 0xc5, 0x03, 0x25, 0xcb, 0xb9, 0x6a, 0xb6, 0x56, 0x64, 0x29, 0xa6, 0x2f, 0x60,
-	0xce, 0x18, 0x61, 0x37, 0xe8, 0xf2, 0x77, 0x64, 0x1e, 0xf2, 0x18, 0xe0, 0x04, 0x05, 0x16, 0x01,
-	0x72, 0x07, 0xf2, 0x4f, 0x45, 0x97, 0xcb, 0x72, 0xa6, 0x9a, 0xad, 0xcd, 0x6c, 0x2c, 0xad, 0x8d,
-	0x74, 0x37, 0x1d, 0xe5, 0xec, 0x89, 0x88, 0x82, 0x45, 0x55, 0x74, 0x0f, 0x8a, 0x66, 0x9a, 0x10,
-	0xc8, 0xe9, 0x83, 0x98, 0x13, 0x63, 0xdd, 0xa8, 0xad, 0x9c, 0x50, 0xa1, 0x98, 0x12, 0x8b, 0x80,
-	0xae, 0x6c, 0x2b, 0x31, 0x40, 0x19, 0x25, 0x86, 0x31, 0xdd, 0x81, 0x42, 0xea, 0x83, 0x76, 0x61,
-	0xab, 0xdb, 0x0d, 0xb9, 0x94, 0x31, 0x5b, 0x02, 0xcf, 0x3b, 0x98, 0xf9, 0xc7, 0x41, 0xfa, 0x11,
-	0xa0, 0x3d, 0xec, 0x48, 0x37, 0xf4, 0x3a, 0x17, 0x32, 0x2d, 0xc2, 0x64, 0x4b, 0x08, 0x3f, 0x25,
-	0x89, 0x11, 0xb9, 0x0f, 0x76, 0x93, 0x4b, 0xe5, 0x05, 0xa8, 0xaa, 0xe9, 0xe9, 0xb0, 0x37, 0xf4,
-	0x64, 0xff, 0x88, 0x07, 0x2a, 0x76, 0xfe, 0x82, 0x0a, 0x7a, 0x1b, 0x27, 0x64, 0x5c, 0x0e, 0x44,
-	0x20, 0xb9, 0x1e, 0xa0, 0x3d, 0x74, 0xdd, 0x64, 0x80, 0x69, 0x96, 0x40, 0xfa, 0x04, 0x07, 0x65,
-	0xfc, 0xcd, 0x90, 0x4b, 0x75, 0x89, 0xd5, 0x30, 0x17, 0x20, 0x73, 0x76, 0x01, 0xe8, 0x03, 0x98,
-	0x6e, 0xf4, 0x1d, 0x2f, 0xd8, 0xdf, 0x6a, 0x68, 0x77, 0x1f, 0x85, 0xe2, 0x28, 0xb9, 0x07, 0x1d,
-	0x93, 0x59, 0xc8, 0x1c, 0x08, 0xfc, 0xaa, 0xc0, 0x32, 0x07, 0x82, 0xcc, 0x41, 0x76, 0x7f, 0xab,
-	0x81, 0x6a, 0x8a, 0x4c, 0x87, 0x74, 0x05, 0x4a, 0xc8, 0x90, 0x0e, 0x3e, 0x0f, 0xf9, 0xe7, 0x8e,
-	0xef, 0x75, 0xe3, 0xb1, 0x23, 0x40, 0x97, 0xa1, 0xf8, 0xd0, 0xed, 0x0b, 0xb3, 0xea, 0x31, 0xf7,
-	0x7d, 0x91, 0x54, 0x21, 0xd0, 0x64, 0x8c, 0x3b, 0xdd, 0x63, 0xb3, 0x0c, 0x13, 0x49, 0x19, 0x82,
-	0x8d, 0x43, 0x28, 0xa4, 0x57, 0x45, 0x5e, 0x99, 0x60, 0xc1, 0xd8, 0xbd, 0x91, 0x49, 0x76, 0xd9,
-	0x48, 0x9f, 0x69, 0x40, 0xab, 0x9f, 0x7f, 0xfc, 0xfe, 0x9a, 0xb1, 0xe9, 0x42, 0x5d, 0xa6, 0x97,
-	0x3f, 0x0a, 0x37, 0xad, 0xd5, 0x8d, 0x3f, 0x39, 0x98, 0x8c, 0xfc, 0x22, 0x2d, 0xc8, 0x69, 0x11,
-	0x64, 0xd1, 0xa0, 0x33, 0xde, 0x88, 0x6d, 0x6e, 0xbe, 0xa9, 0x96, 0x2e, 0x61, 0x97, 0xab, 0xb4,
-	0x58, 0xef, 0x20, 0x53, 0x9d, 0xbb, 0x7d, 0xb1, 0x69, 0xad, 0x92, 0x97, 0x30, 0xbb, 0xc3, 0xd5,
-	0x68, 0xef, 0xe4, 0x79, 0x05, 0x71, 0xde, 0xfe, 0x7f, 0x9a, 0xde, 0x40, 0xe2, 0x05, 0x72, 0x2d,
-	0x21, 0x1e, 0xa9, 0x90, 0xeb, 0x16, 0x39, 0x04, 0xc2, 0x78, 0xcf, 0x93, 0x8a, 0x87, 0xc6, 0x6e,
-	0x8f, 0x69, 0x31, 0xde, 0xa4, 0x65, 0xec, 0x52, 0xa1, 0xd7, 0x93, 0x2e, 0x61, 0x4c, 0x5a, 0x3f,
-	0x89, 0x96, 0xff, 0x83, 0xd6, 0xd2, 0x8e, 0xef, 0x6a, 0xac, 0x3d, 0xe3, 0x1b, 0x94, 0xb1, 0x01,
-	0xa1, 0xa5, 0x51, 0x03, 0xa7, 0x7b, 0xac, 0x49, 0x5f, 0xc3, 0x14, 0xe3, 0x2e, 0xf7, 0xde, 0xf2,
-	0xb1, 0xb4, 0xe7, 0xf2, 0x29, 0xe9, 0x0a, 0x92, 0xde, 0xa2, 0x76, 0x42, 0x3a, 0x18, 0xfa, 0x7e,
-	0xfd, 0xc4, 0x78, 0x1a, 0x38, 0xf6, 0x33, 0xc8, 0xb5, 0x86, 0xb2, 0x3f, 0x6e, 0x75, 0xc6, 0x74,
-	0xa5, 0xf3, 0xc8, 0x3e, 0x4b, 0x8a, 0x23, 0x76, 0xd9, 0xaf, 0x59, 0xeb, 0x16, 0xb9, 0x07, 0x79,
-	0x7c, 0x11, 0x97, 0xf2, 0xe1, 0xcc, 0xdb, 0xa1, 0x13, 0xdb, 0x73, 0xdf, 0x4e, 0x2b, 0xd6, 0xf7,
-	0xd3, 0x8a, 0xf5, 0xf3, 0xb4, 0x62, 0x7d, 0xf9, 0x55, 0x99, 0xe8, 0x4c, 0xe2, 0x2f, 0xe1, 0xee,
-	0xdf, 0x00, 0x00, 0x00, 0xff, 0xff, 0x0b, 0x42, 0x95, 0xe4, 0x4e, 0x06, 0x00, 0x00,
+	// 439 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x52, 0x5d, 0x6b, 0x13, 0x41,
+	0x14, 0x75, 0xda, 0x6d, 0x6c, 0x6e, 0x22, 0x86, 0xa1, 0xe8, 0x12, 0x24, 0x2c, 0x83, 0x60, 0x1e,
+	0xb4, 0x85, 0xfa, 0x2e, 0xd8, 0xae, 0xd4, 0x40, 0x5b, 0xc2, 0xec, 0x83, 0xcf, 0xfb, 0x71, 0x49,
+	0x06, 0xb7, 0x33, 0x61, 0x66, 0x16, 0x3f, 0x1e, 0xfc, 0x0d, 0xbe, 0xfa, 0x8f, 0x7c, 0xf4, 0x27,
+	0x48, 0xfc, 0x23, 0x32, 0xb3, 0x93, 0xed, 0x56, 0xa1, 0x6f, 0xf7, 0x9c, 0x39, 0x9c, 0x7b, 0xce,
+	0x65, 0xe0, 0x71, 0xf1, 0xe5, 0x6b, 0x2e, 0xad, 0x90, 0x78, 0xbc, 0xd1, 0xca, 0x2a, 0x3a, 0xec,
+	0x88, 0xe9, 0xb3, 0x95, 0x52, 0xab, 0x1a, 0x4f, 0xf2, 0x8d, 0x38, 0xc9, 0xa5, 0x54, 0x36, 0xb7,
+	0x42, 0x49, 0xd3, 0x0a, 0xd9, 0x0f, 0x02, 0xa3, 0x65, 0x53, 0xd4, 0xa2, 0xf4, 0x34, 0x7d, 0x0e,
+	0x8f, 0x7a, 0x70, 0x91, 0xc6, 0x24, 0x21, 0xf3, 0x21, 0xbf, 0x4b, 0xd2, 0x29, 0x1c, 0x9e, 0x69,
+	0xf5, 0x11, 0xf5, 0x22, 0x8d, 0xf7, 0xbc, 0xa0, 0xc3, 0xee, 0xed, 0x5c, 0x49, 0x8b, 0xd2, 0x9a,
+	0x78, 0x3f, 0x21, 0xf3, 0x31, 0xef, 0x30, 0x7d, 0x09, 0x83, 0x0c, 0x65, 0x85, 0x3a, 0x8e, 0x12,
+	0x32, 0x1f, 0x9d, 0x1e, 0x1d, 0xdf, 0x06, 0xf7, 0x1b, 0xcc, 0x1a, 0x35, 0x0f, 0x1a, 0xf6, 0x01,
+	0x26, 0xfd, 0xb5, 0xb2, 0xc2, 0xcf, 0xf4, 0x08, 0x0e, 0xfc, 0x10, 0x72, 0xb5, 0x80, 0xbe, 0x82,
+	0x83, 0x6b, 0x55, 0xa1, 0x89, 0xf7, 0x92, 0xfd, 0xf9, 0xe8, 0xf4, 0x69, 0xcf, 0x36, 0xcd, 0x6d,
+	0x7e, 0xa9, 0x5a, 0x0b, 0xde, 0xaa, 0xd8, 0x25, 0x8c, 0xfb, 0x34, 0xa5, 0x10, 0xb9, 0x87, 0xe0,
+	0xe9, 0x67, 0xb7, 0x28, 0xb3, 0xb9, 0xb6, 0xbe, 0x5f, 0xc4, 0x5b, 0xe0, 0x94, 0x99, 0x55, 0x1b,
+	0x5f, 0x2c, 0xe2, 0x7e, 0x66, 0x17, 0x30, 0xec, 0xb2, 0xd3, 0x18, 0x1e, 0xbe, 0xad, 0x2a, 0x8d,
+	0xc6, 0x04, 0xb7, 0x1d, 0xa4, 0x49, 0x38, 0xb4, 0x93, 0x75, 0x67, 0xeb, 0x53, 0xec, 0x1b, 0x40,
+	0xd6, 0x14, 0xa6, 0xd4, 0xa2, 0xb8, 0xd7, 0xe9, 0x09, 0x0c, 0x96, 0x4a, 0xd5, 0xc1, 0x24, 0xe2,
+	0x01, 0xd1, 0x37, 0x30, 0x4d, 0xd1, 0x58, 0x21, 0x7d, 0xab, 0x54, 0xb8, 0x71, 0xd5, 0x08, 0xb3,
+	0xbe, 0x41, 0x69, 0x43, 0xe4, 0x7b, 0x14, 0xec, 0x85, 0x4f, 0xc8, 0xd1, 0x6c, 0x94, 0x34, 0xe8,
+	0x02, 0x64, 0x4d, 0x59, 0xee, 0x02, 0x1c, 0xf2, 0x1d, 0x64, 0x4b, 0x98, 0x5c, 0xe3, 0xa7, 0xf3,
+	0xba, 0x31, 0x16, 0xf5, 0x15, 0xde, 0xb8, 0xb8, 0xff, 0xd4, 0x23, 0x7e, 0x5b, 0x9f, 0xfa, 0xef,
+	0xd3, 0x44, 0xb7, 0x9f, 0x86, 0x5d, 0xc0, 0xe8, 0x5d, 0xb9, 0x56, 0x57, 0x68, 0x4c, 0xbe, 0xf2,
+	0xc7, 0x7f, 0x8f, 0x75, 0xad, 0xc2, 0xe2, 0x16, 0x50, 0x06, 0xe3, 0x20, 0x58, 0x54, 0xae, 0x51,
+	0x7b, 0xc2, 0x3b, 0xdc, 0xd9, 0xe4, 0xe7, 0x76, 0x46, 0x7e, 0x6d, 0x67, 0xe4, 0xf7, 0x76, 0x46,
+	0xbe, 0xff, 0x99, 0x3d, 0x28, 0x06, 0xfe, 0xa3, 0xbf, 0xfe, 0x1b, 0x00, 0x00, 0xff, 0xff, 0x31,
+	0xda, 0x38, 0x7c, 0x24, 0x03, 0x00, 0x00,
 }

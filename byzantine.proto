@@ -6,9 +6,10 @@ package byzantine;
 
 /// Publication is the message sent out to the broker.
 message Publication {
-    uint64 PublisherID = 1;
-    uint64 BrokerID = 2;
-    repeated bytes Contents = 3;
+    string PublicationID = 1;
+    string BrokerID = 2;
+    bytes Contents = 3;
+    Publisher Sender = 4;
 }
 
 /// PublicationIndex is the cache pointer of where data actually lives.
@@ -19,14 +20,14 @@ message PublicationIndex {
 
 message DataLocation {
     string Node = 1;
-    uint32 Start = 2;
-    uint32 Stop = 3;
+    uint64 Start = 2;
+    uint64 Stop = 3;
 }
 
 /// Publisher defines a publisher within a quorum.
 message Publisher {
     string Address = 1;
-    uint64 PublisherID = 2;
+    string PublisherID = 2;
 }
 
 /// Subscriber defines a subscriber within a subscriber pool.
@@ -36,79 +37,66 @@ message Subscriber {
     uint64 DestinationDistinguishment = 3;
 }
 
+/// PubResponse returns whether or not the data was actually stored.
 message PubResponse {
     bool Success = 1;
 }
 
-message SubRequest {
+/// NewClusterMember is how new Pub/Subs join the pool
+message NewClusterMember {
     uint64 PublisherID = 1;
     uint64 BrokerID = 2;
 }
 
-
-message ChainMAC {
-    string From = 1;
-    string To = 2;
-    bytes MAC = 3;
-}
-
-message ChainResponse {
-    bool Valid = 1;
-}
-
-message EchoResponse {
+/// Heartbeat is how we determine who is alive and who isn't.
+message EchoMessage {
     bool Hello = 1;
+    string MessageIdent = 2;
 }
 
-message ReadyResponse {
-    bool Ready = 1;
-}
+//service Subscribe {
+//    rpc Subscribe (SubRequest) returns (ReadyResponse) {
+//        option (google.api.http) = {
+//            post: "/subscriber/subscribe"
+//            body: "*"
+//        };
+//    }
+//}
 
-service Subscribe {
-    rpc Subscribe (SubRequest) returns (ReadyResponse) {
-        option (google.api.http) = {
-            post: "/subscriber/subscribe"
-            body: "*"
-        };
-    }
-}
-
-service Broker {
-    rpc Echo (Publication) returns (EchoResponse) {
-        option (google.api.http) = {
-            post: "/broker/echo"
-            body: "*"
-        };
-    }
-
-    rpc GetSubscribers (Subscriber) returns (stream Subscriber) {
-        option (google.api.http).get = "/broker/subscribers";
-    }
-
-    rpc RegisterSubscriber (Subscriber) returns (ReadyResponse) {
-        option (google.api.http) = {
-            post: "/broker/register/{PoolID}"
-            body: "*"
-        };
-    }
-
-    rpc Ready (Publication) returns (ReadyResponse) {
-        option (google.api.http) = {
-            post: "/broker/ready"
-            body: "*"
-        };
-    }
-
-    rpc Receive (Publication) returns (PubResponse) {
-        option (google.api.http) = {
-            post: "/broker/pull/{PublisherID}"
-            body: "*"
-        };
-    }
-
-    rpc Push (stream SubRequest) returns (stream Publication) {
-        option (google.api.http).get = "/broker/push";
-    }
-
-    rpc Chain (Publication) returns (ChainResponse) {}
-}
+//service Broker {
+//    rpc Echo (Publication) returns (EchoResponse) {
+//        option (google.api.http) = {
+//            post: "/broker/echo"
+//            body: "*"
+//        };
+//    }
+//
+//    rpc GetSubscribers (Subscriber) returns (stream Subscriber) {
+//        option (google.api.http).get = "/broker/subscribers";
+//    }
+//
+//    rpc RegisterSubscriber (Subscriber) returns (ReadyResponse) {
+//        option (google.api.http) = {
+//            post: "/broker/register/{PoolID}"
+//            body: "*"
+//        };
+//    }
+//
+//    rpc Ready (Publication) returns (ReadyResponse) {
+//        option (google.api.http) = {
+//            post: "/broker/ready"
+//            body: "*"
+//        };
+//    }
+//
+//    rpc Receive (Publication) returns (PubResponse) {
+//        option (google.api.http) = {
+//            post: "/broker/pull/{PublisherID}"
+//            body: "*"
+//        };
+//    }
+//
+//    rpc Push (stream SubRequest) returns (stream Publication) {
+//        option (google.api.http).get = "/broker/push";
+//    }
+//}
